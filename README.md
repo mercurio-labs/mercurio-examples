@@ -1,32 +1,29 @@
 # Mercurio Examples
 
-Public model corpus, scenario files, tutorials, and expected outputs for
-Mercurio.
+Small, runnable examples for embedding Mercurio language services in an app.
 
-This repository is a peer of `mercurio-core`. Core keeps only small fixtures
-needed for local tests and smoke checks; larger examples and demo corpora should
-move here over time.
+## Examples
 
-Recommended layout:
+`simple-language/` defines and registers a minimal custom language service. It
+parses a tiny line-oriented language and emits KIR elements.
 
-```text
-sysml/
-  training/
-  validation/
-  domain/
-kerml/
-  examples/
-kir/
-  snapshots/
-scenarios/
-  state_machine/
-expected/
-  projections/
-docs/
-```
-
-Tooling can locate this repo with:
+Run it with:
 
 ```powershell
-$env:MERCURIO_EXAMPLES_ROOT = "C:\dev\git\mercurio\mercurio-examples"
+cargo run -p mercurio-simple-language --example compile
+```
+
+`sysml-environment/` uses the packaged SysML language and the latest available
+SysML metamodel.
+
+Run it with:
+
+```powershell
+cargo run -p mercurio-sysml-environment-example
+```
+
+Run all examples and tests with:
+
+```powershell
+cargo test
 ```
