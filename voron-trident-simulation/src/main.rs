@@ -65,19 +65,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let printer_state = entry
             .states
             .get("individual.printer")
-            .and_then(|v| v.first())
+            .and_then(|v| v.last())
             .map(|s| s.as_str())
             .unwrap_or("—");
         let bed_state = entry
             .states
             .get("individual.bed")
-            .and_then(|v| v.first())
+            .and_then(|v| v.last())
             .map(|s| s.as_str())
             .unwrap_or("—");
         let hotend_state = entry
             .states
             .get("individual.hotend")
-            .and_then(|v| v.first())
+            .and_then(|v| v.last())
             .map(|s| s.as_str())
             .unwrap_or("—");
 
@@ -454,17 +454,6 @@ fn transition(
     el(id, "TransitionUsage", &props)
 }
 
-fn initial_marker(id: &str, target: &str) -> KirElement {
-    el(
-        id,
-        "SuccessionFlowUsage",
-        &[
-            ("target", json!(target)),
-            ("trigger_kind", json!("completion")),
-        ],
-    )
-}
-
 /// Expression IR for `self.<feature> >= <threshold>`.
 fn gte_path(feature: &str, threshold: f64) -> Value {
     json!({
@@ -523,27 +512,6 @@ fn append_simulation_semantic_overlay(
             ("expression_ir", gte_path("bed_temperature", 105.0)),
         ],
     ));
-
-    let printer_initial = state_by_name_mut(document, "Idle", "VoronPrinter")?
-        .id
-        .clone();
-    let bed_initial = state_by_name_mut(document, "Cold", "HeatedBed")?.id.clone();
-    let hotend_initial = state_by_name_mut(document, "Cold", "Hotend")?.id.clone();
-
-    state_by_name_mut(document, "Idle", "VoronPrinter")?
-        .properties
-        .insert("is_initial".to_string(), json!(true));
-    state_by_name_mut(document, "Cold", "HeatedBed")?
-        .properties
-        .insert("is_initial".to_string(), json!(true));
-    state_by_name_mut(document, "Cold", "Hotend")?
-        .properties
-        .insert("is_initial".to_string(), json!(true));
-    document.elements.extend([
-        initial_marker("initial.printer.lifecycle", &printer_initial),
-        initial_marker("initial.bed.lifecycle", &bed_initial),
-        initial_marker("initial.hotend.lifecycle", &hotend_initial),
-    ]);
 
     transition_by_name_mut(document, "heating_printing", "VoronPrinter")?
         .properties
@@ -644,31 +612,6 @@ fn transition_by_name_mut<'a>(
     .into())
 }
 
-fn state_by_name_mut<'a>(
-    document: &'a mut KirDocument,
-    name: &str,
-    owner_hint: &str,
-) -> Result<&'a mut KirElement, Box<dyn std::error::Error>> {
-    if let Some(index) = document.elements.iter().position(|element| {
-        (element.kind.contains("StateUsage") || element.id.starts_with("state."))
-            && element
-                .properties
-                .get("declared_name")
-                .and_then(Value::as_str)
-                .is_some_and(|declared| declared == name)
-            && (element
-                .properties
-                .get("owning_type")
-                .and_then(Value::as_str)
-                .is_some_and(|owner| owner.contains(owner_hint))
-                || element.id.contains(owner_hint))
-    }) {
-        return Ok(&mut document.elements[index]);
-    }
-
-    Err(format!("compiled model is missing state `{name}` for `{owner_hint}`").into())
-}
-
 fn machine_id_for_state(
     document: &KirDocument,
     state_name: &str,
@@ -721,34 +664,6 @@ fn machine_id_for_state(
         })
 }
 
-fn state_id_for_state(
-    document: &KirDocument,
-    state_name: &str,
-    owner_hint: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    document
-        .elements
-        .iter()
-        .find(|element| {
-            (element.kind.contains("StateUsage") || element.id.starts_with("state."))
-                && element
-                    .properties
-                    .get("declared_name")
-                    .and_then(Value::as_str)
-                    .is_some_and(|declared| declared == state_name)
-                && (element
-                    .properties
-                    .get("owning_type")
-                    .and_then(Value::as_str)
-                    .is_some_and(|owner| owner.contains(owner_hint))
-                    || element.id.contains(owner_hint))
-        })
-        .map(|element| element.id.clone())
-        .ok_or_else(|| {
-            format!("compiled model is missing state `{state_name}` for `{owner_hint}`").into()
-        })
-}
-
 fn shorten(s: &str) -> &str {
     // Strip the common state id prefixes for display
     s.rsplit('.').next().unwrap_or(s)
@@ -760,10 +675,6 @@ fn append_print_sequence_analysis_case(
     let printer_machine = machine_id_for_state(document, "Idle", "VoronPrinter")?;
     let bed_machine = machine_id_for_state(document, "Cold", "HeatedBed")?;
     let hotend_machine = machine_id_for_state(document, "Cold", "Hotend")?;
-    let printer_initial = state_id_for_state(document, "Idle", "VoronPrinter")?;
-    let bed_initial = state_id_for_state(document, "Cold", "HeatedBed")?;
-    let hotend_initial = state_id_for_state(document, "Cold", "Hotend")?;
-
     document.elements.push(el(
         "analysis.PrintSequence",
         "SysML::Systems::AnalysisCaseDefinition",
@@ -778,7 +689,6 @@ fn append_print_sequence_analysis_case(
                     {
                         "subject": "individual.printer",
                         "machine": printer_machine,
-                        "initial_state": printer_initial,
                         "events": [
                             { "id": "event.printer.start", "trigger": "start" }
                         ]
@@ -786,13 +696,11 @@ fn append_print_sequence_analysis_case(
                     {
                         "subject": "individual.bed",
                         "machine": bed_machine,
-                        "initial_state": bed_initial,
                         "events": []
                     },
                     {
                         "subject": "individual.hotend",
                         "machine": hotend_machine,
-                        "initial_state": hotend_initial,
                         "events": []
                     }
                 ]),

@@ -118,6 +118,13 @@ package VoronTrident350 {
 
     analysis def PrintSequence :> AnalysisCase {
         subject printer : VoronPrinter;
+        subject bed : HeatedBed;
+        subject hotend : Hotend;
+
+        assume constraint = printer.bed_temperature == 22.0;
+        assume constraint = printer.hotend_temperature == 22.0;
+        assume constraint = bed.temperature == 22.0;
+        assume constraint = hotend.temperature == 22.0;
 
         objective thermalProfile {
             subject = printer.bed.temperature;
