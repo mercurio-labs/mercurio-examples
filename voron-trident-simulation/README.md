@@ -67,15 +67,17 @@ driven by the simulation model, not a hardcoded timestamp.
 model/
   voron-trident-350.sysml   Structural SysML model and PrintSequence analysis case
 sim/
-  voron.sim3d.yaml          3D visual binding config for SimulationPanel
+  voron.sim3d.json          Project-owned 3D scene and visual binding config
 src/
   main.rs                   Rust example — compiles SysML, patches executable semantics, runs concurrent sim
 ```
 
 ## Connecting to the visualisation
 
-The `sim/voron.sim3d.yaml` binding config maps trace channels to 3D scene
-properties.  To render the simulation live:
+The `sim/voron.sim3d.json` config maps trace channels to project-owned 3D scene
+objects and visual properties. The Mercurio product provides the generic
+primitive renderer; the Voron-specific scene description lives with this
+example project.
 
 ```tsx
 import { SimulationPanel } from '@mercurio/workbench-ui';
@@ -89,7 +91,8 @@ import { SimulationPanel } from '@mercurio/workbench-ui';
 
 The `SimulationPanel` with `concurrent` prop opens the multi-subject picker,
 compiles the source via WASM, runs `runConcurrentSimulation`, and renders the
-result through the binding engine into the Three.js scene.
+result through the project `*.sim3d.json` config when the workspace contains
+one.
 
 ## Key simulation concepts demonstrated
 

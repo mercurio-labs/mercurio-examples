@@ -1,0 +1,87 @@
+{
+  "bindings": [
+    {
+      "channel": "individual.bed.temperature",
+      "target": "bed.color",
+      "transform": { "kind": "colormap", "name": "temperature" }
+    },
+    {
+      "channel": "individual.bed.temperature",
+      "target": "bed.heatIntensity",
+      "transform": { "kind": "scale", "factor": 0.009091 }
+    },
+    {
+      "channel": "individual.hotend.temperature",
+      "target": "hotend.emissiveIntensity",
+      "transform": { "kind": "scale", "factor": 0.004 }
+    },
+    { "channel": "individual.printer.activeTool", "target": "toolhead.colorIndex" },
+    { "channel": "individual.bed.temperature", "target": "status.bedTemp" },
+    { "channel": "individual.hotend.temperature", "target": "status.hotendTemp" }
+  ],
+  "color_maps": {
+    "temperature": {
+      "kind": "gradient",
+      "domain": [20, 110],
+      "stops": [
+        { "at": 20, "color": "#252836" },
+        { "at": 60, "color": "#78350f" },
+        { "at": 90, "color": "#ea580c" },
+        { "at": 110, "color": "#ef4444" }
+      ]
+    }
+  },
+  "scene": {
+    "background": "#0a0c15",
+    "environment": "city",
+    "camera": {
+      "position": [7, 10, 12],
+      "lookAt": [0, 2.5, 0],
+      "fov": 42
+    },
+    "objects": [
+      { "id": "post.front.left", "kind": "box", "size": [0.15, 6.2, 0.15], "position": [-3.5, 3.1, -3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "post.front.right", "kind": "box", "size": [0.15, 6.2, 0.15], "position": [3.5, 3.1, -3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "post.back.left", "kind": "box", "size": [0.15, 6.2, 0.15], "position": [-3.5, 3.1, 3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "post.back.right", "kind": "box", "size": [0.15, 6.2, 0.15], "position": [3.5, 3.1, 3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+
+      { "id": "rail.front", "kind": "box", "size": [7.4, 0.12, 0.12], "position": [0, 6.15, -3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "rail.back", "kind": "box", "size": [7.4, 0.12, 0.12], "position": [0, 6.15, 3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "rail.left", "kind": "box", "size": [0.12, 0.12, 7.4], "position": [-3.5, 6.15, 0], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "rail.right", "kind": "box", "size": [0.12, 0.12, 7.4], "position": [3.5, 6.15, 0], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+
+      { "id": "base", "kind": "box", "size": [7.3, 0.22, 7.3], "position": [0, 0.11, 0], "receiveShadow": true, "material": { "color": "#181b2a", "roughness": 0.55, "metalness": 0.25 } },
+      {
+        "id": "bed",
+        "kind": "box",
+        "size": [6.85, 0.05, 6.85],
+        "position": [0, 0.265, 0],
+        "receiveShadow": true,
+        "bindings": { "emissive": "bed.color", "emissiveIntensity": "bed.heatIntensity" },
+        "material": { "color": "#111827", "emissive": "#252836", "emissiveIntensity": 0.2, "roughness": 0.38, "metalness": 0.2 }
+      },
+      { "id": "x.rail", "kind": "box", "size": [7.5, 0.1, 0.1], "position": [0, 5.75, -3.5], "material": { "color": "#2e3248", "roughness": 0.25, "metalness": 0.85 } },
+      { "id": "carriage", "kind": "box", "size": [0.42, 0.38, 0.42], "position": [0, 5.6, -3.5], "material": { "color": "#d0d4e8", "roughness": 0.26, "metalness": 0.7 } },
+      {
+        "id": "toolhead",
+        "kind": "sphere",
+        "radius": 0.18,
+        "position": [0, 5.26, -3.5],
+        "bindings": { "colorIndex": "toolhead.colorIndex", "emissiveIntensity": "hotend.emissiveIntensity" },
+        "material": {
+          "color": "#06b6d4",
+          "emissive": "#06b6d4",
+          "emissiveIntensity": 0.25,
+          "roughness": 0.3,
+          "metalness": 0.45,
+          "colorPalette": ["#06b6d4", "#f97316", "#ec4899"]
+        }
+      },
+      { "id": "nozzle", "kind": "cone", "size": [0.055, 0.28, 8], "position": [0, 4.98, -3.5], "rotation": [3.14159, 0, 0], "material": { "color": "#b09060", "roughness": 0.28, "metalness": 0.7 } },
+
+      { "id": "dock.0", "kind": "sphere", "radius": 0.13, "position": [4.5, 5.98, -2], "material": { "color": "#06b6d4", "emissive": "#06b6d4", "emissiveIntensity": 0.2, "transparent": true, "opacity": 0.75 } },
+      { "id": "dock.1", "kind": "sphere", "radius": 0.13, "position": [4.5, 5.98, 0], "material": { "color": "#f97316", "emissive": "#f97316", "emissiveIntensity": 0.2, "transparent": true, "opacity": 0.75 } },
+      { "id": "dock.2", "kind": "sphere", "radius": 0.13, "position": [4.5, 5.98, 2], "material": { "color": "#ec4899", "emissive": "#ec4899", "emissiveIntensity": 0.2, "transparent": true, "opacity": 0.75 } }
+    ]
+  }
+}
