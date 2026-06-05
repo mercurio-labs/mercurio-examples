@@ -2,9 +2,8 @@
  * Voron Trident 350 + Indx multi-toolhead — structural model.
  *
  * This file captures the system decomposition and names the analysis case
- * that drives the simulation example.  State-machine topology is authored
- * here and compiled from SysML.  The Rust example still applies a small KIR
- * overlay for executable guards/effects until those lower natively.
+ * that drives the simulation example. State-machine topology and scenario
+ * subjects are authored here and compiled from SysML.
  */
 package VoronTrident350 {
     import ScalarValues::*;
