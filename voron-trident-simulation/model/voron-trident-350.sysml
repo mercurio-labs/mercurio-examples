@@ -2,9 +2,9 @@
  * Voron Trident 350 + Indx multi-toolhead — structural model.
  *
  * This file captures the system decomposition and names the analysis case
- * that drives the simulation example.  The executable state-machine overlay
- * still lives in the Rust example as KIR until the compiler can lower the
- * full simulation vocabulary.
+ * that drives the simulation example.  State-machine topology is authored
+ * here and compiled from SysML.  The Rust example still applies a small KIR
+ * overlay for executable guards/effects until those lower natively.
  */
 package VoronTrident350 {
     import ScalarValues::*;
@@ -28,6 +28,21 @@ package VoronTrident350 {
         part motion     : CoreXYMotionSystem;
         part toolchanger: IndxToolchanger;
         part electronics: Electronics;
+
+        state lifecycle {
+            state Idle;
+            state Homing;
+            state Heating;
+            state Printing;
+            state ToolChange;
+            state Printing2;
+
+            transition idle_homing first Idle accept start then Homing;
+            transition homing_heating first Homing accept after 2.5 then Heating;
+            transition heating_printing first Heating accept when bed_temperature >= 105 then Printing;
+            transition printing_toolchange first Printing accept after 5.0 then ToolChange;
+            transition toolchange_printing2 first ToolChange accept after 3.0 then Printing2;
+        }
     }
 
     // ── Heated bed ───────────────────────────────────────────────────────
@@ -37,11 +52,29 @@ package VoronTrident350 {
         attribute targetTemp    : Real = 110.0;   // °C
         attribute heatRate      : Real = 2.3;     // °C / s  (measured on a Trident 350)
         attribute bedDimension  : Real = 350.0;   // mm  (square)
+
+        state lifecycle {
+            state Cold;
+            state Heating;
+            state Ready;
+
+            transition cold_heating first Cold accept after 0.5 then Heating;
+            transition heating_ready first Heating accept after 37.8 then Ready;
+        }
     }
 
     // ── Hotend / toolhead ────────────────────────────────────────────────
 
     part def Hotend {
+        state lifecycle {
+            state Cold;
+            state Heating;
+            state Ready;
+
+            transition cold_heating first Cold accept after 0.5 then Heating;
+            transition heating_ready first Heating accept after 45.6 then Ready;
+        }
+
         attribute temperature   : Real = 22.0;    // °C
         attribute targetTemp    : Real = 250.0;   // °C
         attribute heatRate      : Real = 5.0;     // °C / s

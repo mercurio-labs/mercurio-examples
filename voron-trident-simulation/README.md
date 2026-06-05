@@ -69,7 +69,7 @@ model/
 sim/
   voron.sim3d.yaml          3D visual binding config for SimulationPanel
 src/
-  main.rs                   Rust example — builds KIR, runs concurrent sim
+  main.rs                   Rust example — compiles SysML, patches executable semantics, runs concurrent sim
 ```
 
 ## Connecting to the visualisation
@@ -95,16 +95,19 @@ result through the binding engine into the Three.js scene.
 
 | Concept | Where |
 |---|---|
-| Concurrent state machines | Three `subjects` in the `PrintSequence` `AnalysisCaseDefinition` |
-| Rate effects | `tr.bed.heating_ready` and `tr.hotend.heating_ready` effects arrays |
-| Cross-machine Assign | `tr.bed.heating_ready` writes `printer.bed_temperature` |
-| Change guard (cross-part) | `tr.printer.heating_printing` guard reads `printer.bed_temperature` |
+| Concurrent state machines | Authored `state lifecycle` blocks in `voron-trident-350.sysml` |
+| Rate effects | Overlayed `heating_ready` effects arrays for bed and hotend |
+| Cross-machine Assign | Overlayed bed `heating_ready` writes `printer.bed_temperature` |
+| Change guard (cross-part) | Overlayed printer `heating_printing` guard reads `printer.bed_temperature` |
 | Shared execution context | Single `BTreeMap<(subject_id, feature), Value>` across all machines |
 
 ## Analysis case scenario
 
-The executable run is sourced from `analysis.PrintSequence`, a
-`SysML::Systems::AnalysisCaseDefinition` KIR element. It declares the
-simulation subjects, initial values, objective channels, and injected `start`
-event. The Rust example extracts that analysis case into a
-`ConcurrentSimulationScenario` immediately before calling the engine.
+The state-machine topology is compiled from `voron-trident-350.sysml`. The
+executable run is sourced from `analysis.PrintSequence`, a
+`SysML::Systems::AnalysisCaseDefinition` KIR element appended by the Rust
+example for the scenario metadata that is not yet lowerable from authored
+SysML. It declares the simulation subjects, initial values, objective channels,
+compiled initial states, and injected `start` event. The Rust example extracts
+that analysis case into a `ConcurrentSimulationScenario` immediately before
+calling the engine.

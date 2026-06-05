@@ -2,7 +2,7 @@
 //!
 //! Demonstrates Phase 4 of the Mercurio simulation stack:
 //!
-//! - **Three concurrent state machines** run on a shared time axis:
+//! - **Three concurrent state machines** are authored in SysML and run on a shared time axis:
 //!   `VoronLifecycle` (printer), `BedLifecycle` (heated bed), and
 //!   `HotendLifecycle` (toolhead).
 //! - **Rate effects** drive `bed.temperature` at 2.3 °C/s and
@@ -26,13 +26,16 @@ use std::collections::BTreeMap;
 use mercurio_core::{KirElement, Runtime};
 use mercurio_sysml::{
     ConcurrentSimulationScenario, ConcurrentSubjectScenario, KirDocument,
-    StateMachineScenarioEvent, run_concurrent_simulation, scenario_from_analysis_case,
+    StateMachineScenarioEvent, compile_sysml_text, load_sysml_baseline, run_concurrent_simulation,
+    scenario_from_analysis_case,
 };
 use serde_json::{Value, json};
 
+const VORON_MODEL: &str = include_str!("../model/voron-trident-350.sysml");
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut document = build_voron_document();
-    append_print_sequence_analysis_case(&mut document);
+    let mut document = build_voron_document()?;
+    append_print_sequence_analysis_case(&mut document)?;
     let runtime = Runtime::from_document(document)?;
     let scenario = scenario_from_analysis_case(&runtime, "analysis.PrintSequence")?;
 
@@ -181,8 +184,8 @@ fn build_scenario() -> ConcurrentSimulationScenario {
 
 // ── KIR document ─────────────────────────────────────────────────────────────
 //
-// Builds the model as KirElements.  This mirrors what the SysML compiler
-// would produce for voron-trident-350.sysml combined with simulation overlays.
+// Compiles voron-trident-350.sysml, then appends the executable simulation
+// metadata that is not yet lowerable from authored SysML.
 //
 // State machine topology
 // ──────────────────────
@@ -205,7 +208,17 @@ fn build_scenario() -> ConcurrentSimulationScenario {
 //    HotendHeating ──[After 45.6s, Rate(temp 5.0/s)]──> HotendReady
 //      entry into HotendReady: Assign (printer.hotend_temperature = 250)
 
-fn build_voron_document() -> KirDocument {
+fn build_voron_document() -> Result<KirDocument, Box<dyn std::error::Error>> {
+    let stdlib = load_sysml_baseline()?;
+    let mut document = compile_sysml_text(VORON_MODEL, "voron-trident-350.sysml", &stdlib)
+        .map_err(|diagnostic| format!("failed to compile Voron SysML model: {diagnostic}"))?;
+    append_runtime_subject_aliases(&mut document);
+    append_simulation_semantic_overlay(&mut document)?;
+    Ok(document)
+}
+
+#[allow(dead_code)]
+fn build_legacy_voron_document() -> KirDocument {
     KirDocument {
         metadata: BTreeMap::new(),
         elements: vec![
@@ -441,6 +454,17 @@ fn transition(
     el(id, "TransitionUsage", &props)
 }
 
+fn initial_marker(id: &str, target: &str) -> KirElement {
+    el(
+        id,
+        "SuccessionFlowUsage",
+        &[
+            ("target", json!(target)),
+            ("trigger_kind", json!("completion")),
+        ],
+    )
+}
+
 /// Expression IR for `self.<feature> >= <threshold>`.
 fn gte_path(feature: &str, threshold: f64) -> Value {
     json!({
@@ -458,12 +482,288 @@ fn gte_path(feature: &str, threshold: f64) -> Value {
     })
 }
 
+fn append_runtime_subject_aliases(document: &mut KirDocument) {
+    document.elements.extend([
+        el(
+            "individual.printer",
+            "Model::IndividualUsage",
+            &[
+                ("declared_name", json!("printer")),
+                ("type", json!("type.VoronTrident350.VoronPrinter")),
+            ],
+        ),
+        el(
+            "individual.bed",
+            "Model::IndividualUsage",
+            &[
+                ("declared_name", json!("bed")),
+                ("type", json!("type.VoronTrident350.HeatedBed")),
+            ],
+        ),
+        el(
+            "individual.hotend",
+            "Model::IndividualUsage",
+            &[
+                ("declared_name", json!("hotend")),
+                ("type", json!("type.VoronTrident350.Hotend")),
+            ],
+        ),
+    ]);
+}
+
+fn append_simulation_semantic_overlay(
+    document: &mut KirDocument,
+) -> Result<(), Box<dyn std::error::Error>> {
+    document.elements.push(el(
+        "feature.Printer.bedReady",
+        "Model::CalculationUsage",
+        &[
+            ("declared_name", json!("bedReady")),
+            ("owner", json!("type.VoronTrident350.VoronPrinter")),
+            ("expression_ir", gte_path("bed_temperature", 105.0)),
+        ],
+    ));
+
+    let printer_initial = state_by_name_mut(document, "Idle", "VoronPrinter")?
+        .id
+        .clone();
+    let bed_initial = state_by_name_mut(document, "Cold", "HeatedBed")?.id.clone();
+    let hotend_initial = state_by_name_mut(document, "Cold", "Hotend")?.id.clone();
+
+    state_by_name_mut(document, "Idle", "VoronPrinter")?
+        .properties
+        .insert("is_initial".to_string(), json!(true));
+    state_by_name_mut(document, "Cold", "HeatedBed")?
+        .properties
+        .insert("is_initial".to_string(), json!(true));
+    state_by_name_mut(document, "Cold", "Hotend")?
+        .properties
+        .insert("is_initial".to_string(), json!(true));
+    document.elements.extend([
+        initial_marker("initial.printer.lifecycle", &printer_initial),
+        initial_marker("initial.bed.lifecycle", &bed_initial),
+        initial_marker("initial.hotend.lifecycle", &hotend_initial),
+    ]);
+
+    transition_by_name_mut(document, "heating_printing", "VoronPrinter")?
+        .properties
+        .insert(
+            "guard_feature".to_string(),
+            json!("feature.Printer.bedReady"),
+        );
+    transition_by_name_mut(document, "toolchange_printing2", "VoronPrinter")?
+        .properties
+        .insert(
+            "effects".to_string(),
+            json!([{ "kind": "assign", "feature": "activeTool", "value": 1.0 }]),
+        );
+    transition_by_name_mut(document, "heating_ready", "HeatedBed")?
+        .properties
+        .insert(
+            "effects".to_string(),
+            json!([
+                {
+                    "kind":            "rate",
+                    "feature":         "temperature",
+                    "rate_per_second": 2.3,
+                    "unit":            "C"
+                },
+                {
+                    "kind":    "assign",
+                    "feature": "bed_temperature",
+                    "value":   110.0
+                }
+            ]),
+        );
+    transition_by_name_mut(document, "heating_ready", "Hotend")?
+        .properties
+        .insert(
+            "effects".to_string(),
+            json!([
+                {
+                    "kind":            "rate",
+                    "feature":         "temperature",
+                    "rate_per_second": 5.0,
+                    "unit":            "C"
+                },
+                {
+                    "kind":    "assign",
+                    "feature": "hotend_temperature",
+                    "value":   250.0
+                }
+            ]),
+        );
+
+    Ok(())
+}
+
+fn transition_by_name_mut<'a>(
+    document: &'a mut KirDocument,
+    name: &str,
+    owner_hint: &str,
+) -> Result<&'a mut KirElement, Box<dyn std::error::Error>> {
+    if let Some(index) = document.elements.iter().position(|element| {
+        (element.kind.contains("Transition") || element.id.starts_with("transition."))
+            && element
+                .properties
+                .get("declared_name")
+                .and_then(Value::as_str)
+                .is_some_and(|declared| declared == name)
+            && (element
+                .properties
+                .get("owning_type")
+                .or_else(|| element.properties.get("owner"))
+                .and_then(Value::as_str)
+                .is_some_and(|owner| owner.contains(owner_hint))
+                || element.id.contains(owner_hint))
+    }) {
+        return Ok(&mut document.elements[index]);
+    }
+
+    let candidates = document
+        .elements
+        .iter()
+        .filter(|element| element.id.contains(name) || element.kind.contains("Transition"))
+        .map(|element| {
+            format!(
+                "{} kind={} owner={:?} name={:?}",
+                element.id,
+                element.kind,
+                element
+                    .properties
+                    .get("owning_type")
+                    .or_else(|| element.properties.get("owner")),
+                element.properties.get("declared_name")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    Err(format!(
+        "compiled model is missing transition `{name}` for `{owner_hint}`; candidates: {candidates}"
+    )
+    .into())
+}
+
+fn state_by_name_mut<'a>(
+    document: &'a mut KirDocument,
+    name: &str,
+    owner_hint: &str,
+) -> Result<&'a mut KirElement, Box<dyn std::error::Error>> {
+    if let Some(index) = document.elements.iter().position(|element| {
+        (element.kind.contains("StateUsage") || element.id.starts_with("state."))
+            && element
+                .properties
+                .get("declared_name")
+                .and_then(Value::as_str)
+                .is_some_and(|declared| declared == name)
+            && (element
+                .properties
+                .get("owning_type")
+                .and_then(Value::as_str)
+                .is_some_and(|owner| owner.contains(owner_hint))
+                || element.id.contains(owner_hint))
+    }) {
+        return Ok(&mut document.elements[index]);
+    }
+
+    Err(format!("compiled model is missing state `{name}` for `{owner_hint}`").into())
+}
+
+fn machine_id_for_state(
+    document: &KirDocument,
+    state_name: &str,
+    owner_hint: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    document
+        .elements
+        .iter()
+        .find(|element| {
+            (element.kind.contains("StateUsage") || element.id.starts_with("state."))
+                && element
+                    .properties
+                    .get("declared_name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|declared| declared == state_name)
+                && (element
+                    .properties
+                    .get("owning_type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|owner| owner.contains(owner_hint))
+                    || element.id.contains(owner_hint))
+        })
+        .and_then(|element| {
+            element
+                .properties
+                .get("owning_type")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned)
+        })
+        .ok_or_else(|| {
+            let candidates = document
+                .elements
+                .iter()
+                .filter(|element| element.id.contains(state_name))
+                .map(|element| {
+                    format!(
+                        "{} kind={} owner={:?} name={:?}",
+                        element.id,
+                        element.kind,
+                        element.properties.get("owning_type"),
+                        element.properties.get("declared_name")
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+            format!(
+                "compiled model is missing state `{state_name}` for `{owner_hint}`; candidates: {candidates}"
+            )
+            .into()
+        })
+}
+
+fn state_id_for_state(
+    document: &KirDocument,
+    state_name: &str,
+    owner_hint: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    document
+        .elements
+        .iter()
+        .find(|element| {
+            (element.kind.contains("StateUsage") || element.id.starts_with("state."))
+                && element
+                    .properties
+                    .get("declared_name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|declared| declared == state_name)
+                && (element
+                    .properties
+                    .get("owning_type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|owner| owner.contains(owner_hint))
+                    || element.id.contains(owner_hint))
+        })
+        .map(|element| element.id.clone())
+        .ok_or_else(|| {
+            format!("compiled model is missing state `{state_name}` for `{owner_hint}`").into()
+        })
+}
+
 fn shorten(s: &str) -> &str {
     // Strip the common state id prefixes for display
     s.rsplit('.').next().unwrap_or(s)
 }
 
-fn append_print_sequence_analysis_case(document: &mut KirDocument) {
+fn append_print_sequence_analysis_case(
+    document: &mut KirDocument,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let printer_machine = machine_id_for_state(document, "Idle", "VoronPrinter")?;
+    let bed_machine = machine_id_for_state(document, "Cold", "HeatedBed")?;
+    let hotend_machine = machine_id_for_state(document, "Cold", "Hotend")?;
+    let printer_initial = state_id_for_state(document, "Idle", "VoronPrinter")?;
+    let bed_initial = state_id_for_state(document, "Cold", "HeatedBed")?;
+    let hotend_initial = state_id_for_state(document, "Cold", "Hotend")?;
+
     document.elements.push(el(
         "analysis.PrintSequence",
         "SysML::Systems::AnalysisCaseDefinition",
@@ -477,19 +777,22 @@ fn append_print_sequence_analysis_case(document: &mut KirDocument) {
                 json!([
                     {
                         "subject": "individual.printer",
-                        "machine": "VoronLifecycle",
+                        "machine": printer_machine,
+                        "initial_state": printer_initial,
                         "events": [
                             { "id": "event.printer.start", "trigger": "start" }
                         ]
                     },
                     {
                         "subject": "individual.bed",
-                        "machine": "BedLifecycle",
+                        "machine": bed_machine,
+                        "initial_state": bed_initial,
                         "events": []
                     },
                     {
                         "subject": "individual.hotend",
-                        "machine": "HotendLifecycle",
+                        "machine": hotend_machine,
+                        "initial_state": hotend_initial,
                         "events": []
                     }
                 ]),
@@ -514,4 +817,5 @@ fn append_print_sequence_analysis_case(document: &mut KirDocument) {
             ),
         ],
     ));
+    Ok(())
 }
