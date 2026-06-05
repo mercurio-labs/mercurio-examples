@@ -1,2 +1,3 @@
-.mercurio/cache/
+.mercurio/
+**/.mercurio/
 target/
