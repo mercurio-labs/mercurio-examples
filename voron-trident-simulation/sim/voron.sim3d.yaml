@@ -1,0 +1,64 @@
+# Voron Trident 350 — 3D visualisation binding config.
+#
+# Consumed by mercurio-product's SimulationPanel / VoronScene.
+# Channel names are "subject_id.feature_name"; the binding engine converts
+# these to the "subject_id|feature_name" pipe keys used in the trace.
+
+bindings:
+  # ── Printer top-level state ────────────────────────────────────────────
+  - channel: individual.printer.state
+    target:  printerStateLabel.text
+
+  # ── Heated bed ────────────────────────────────────────────────────────
+  - channel: individual.bed.temperature
+    target:  bed.color
+    transform:
+      kind:  colormap
+      name:  temperature
+
+  - channel: individual.bed.temperature
+    target:  bed.heatIntensity
+    transform:
+      kind:   scale
+      factor: 0.009091    # 1 / 110  →  0..1
+
+  # ── Hotend ────────────────────────────────────────────────────────────
+  - channel: individual.hotend.temperature
+    target:  hotend.emissiveIntensity
+    transform:
+      kind:   scale
+      factor: 0.004       # 1 / 250  →  0..1
+
+  # ── Motion ────────────────────────────────────────────────────────────
+  - channel: individual.printer.position_x
+    target:  carriage.position.x
+    transform:
+      kind:   scale
+      factor: 0.001       # mm → Three.js units (1 unit = 50 mm)
+
+  - channel: individual.printer.position_y
+    target:  carriage.position.z
+    transform:
+      kind:   scale
+      factor: 0.001
+
+  # ── Indx toolchanger ──────────────────────────────────────────────────
+  - channel: individual.printer.activeTool
+    target:  toolhead.colorIndex
+
+  # ── Status bar passthrough (raw °C, no transform) ─────────────────────
+  - channel: individual.bed.temperature
+    target:  status.bedTemp
+
+  - channel: individual.hotend.temperature
+    target:  status.hotendTemp
+
+color_maps:
+  temperature:
+    kind:   gradient
+    domain: [20, 110]
+    stops:
+      - { at: 20,  color: "#252836" }
+      - { at: 60,  color: "#78350f" }
+      - { at: 90,  color: "#ea580c" }
+      - { at: 110, color: "#ef4444" }
