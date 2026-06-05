@@ -156,6 +156,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mercurio-voron-trident-simulation-example"
+version = "0.1.0"
+dependencies = [
+ "mercurio-foundation",
+ "mercurio-sysml",
+ "serde_json",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

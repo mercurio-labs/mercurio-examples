@@ -68,6 +68,8 @@ model/
   voron-trident-350.sysml   Structural SysML model and PrintSequence analysis case
 sim/
   voron.sim3d.json          Project-owned 3D scene and visual binding config
+assets/
+  voron-trident-350.glb     Project-owned static printer geometry
 src/
   main.rs                   Rust example — compiles SysML, patches executable semantics, runs concurrent sim
 ```

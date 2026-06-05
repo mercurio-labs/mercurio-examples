@@ -2,6 +2,7 @@
 members = [
     "simple-language",
     "sysml-environment",
+    "voron-trident-simulation",
 ]
 resolver = "2"
 
