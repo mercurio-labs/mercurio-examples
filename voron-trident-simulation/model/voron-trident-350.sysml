@@ -54,11 +54,17 @@ package VoronTrident350 {
 
         state lifecycle {
             state Cold;
-            state Heating;
+            state Heating {
+                do action integrate {
+                    assert constraint {
+                        temperature == temperature + heatRate * duration;
+                    }
+                }
+            }
             state Ready;
 
             transition cold_heating first Cold accept after 0.5 then Heating;
-            transition heating_ready first Heating accept after 37.8 then Ready;
+            transition heating_ready first Heating accept when temperature >= targetTemp then Ready;
         }
     }
 
@@ -67,11 +73,17 @@ package VoronTrident350 {
     part def Hotend {
         state lifecycle {
             state Cold;
-            state Heating;
+            state Heating {
+                do action integrate {
+                    assert constraint {
+                        temperature == temperature + heatRate * duration;
+                    }
+                }
+            }
             state Ready;
 
             transition cold_heating first Cold accept after 0.5 then Heating;
-            transition heating_ready first Heating accept after 45.6 then Ready;
+            transition heating_ready first Heating accept when temperature >= targetTemp then Ready;
         }
 
         attribute temperature   : Real = 22.0;    // °C
