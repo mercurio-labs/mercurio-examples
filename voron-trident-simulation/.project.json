@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "Voron Trident 350 — Print Sequence",
+  "views": [
+    {
+      "label": "Simulation",
+      "script": "sim/launch.py"
+    }
+  ]
+}
