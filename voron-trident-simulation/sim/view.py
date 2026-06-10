@@ -22,7 +22,7 @@ from plotly.subplots import make_subplots
 # ── 1. Load model ─────────────────────────────────────────────────────────────
 #
 # mercurio.open() accepts a .kpar archive, a workspace directory, or a
-# single .sysml source file. Returns a ModelRuntime backed by compiled KIR.
+# single .sysml source file. Returns a Model backed by compiled KIR.
 
 model = mercurio.open(".")          # workspace root; compiles on first open
 
