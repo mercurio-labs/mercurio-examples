@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "Sensor System",
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}
