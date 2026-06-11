@@ -22,6 +22,21 @@ Run it with:
 cargo run -p mercurio-sysml-environment-example
 ```
 
+`model-graph-analysis/` is a Python analysis example that compiles a SysML
+model, extracts the Mercurio graph, scores decision candidates, and writes an
+interactive D3 HTML visualization.
+
+Run it with:
+
+```powershell
+python mercurio-examples/model-graph-analysis/analyze_model_d3.py
+```
+
+`project-plugin-pacti-analysis/` is a project-local capability plugin example.
+It declares a process-backed contract-analysis capability, a static web view,
+and a Python wrapper that can be replaced with a stock Pacti adapter while
+preserving Mercurio's neutral JSON DTO boundary.
+
 Run all examples and tests with:
 
 ```powershell

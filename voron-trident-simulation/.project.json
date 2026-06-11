@@ -1,10 +1,24 @@
 {
   "version": 1,
-  "name": "Voron Trident 350 — Print Sequence",
+  "name": "Voron Trident 350 - Print Sequence",
   "views": [
     {
-      "label": "Simulation",
-      "script": "sim/launch.py"
+      "label": "Voron Print Sequence",
+      "kind": "simulation",
+      "runtime": "python_process",
+      "protocol": "legacy_process",
+      "entry": "sim/launch.py",
+      "script": "sim/launch.py",
+      "artifactKinds": [
+        "simulation_trace"
+      ],
+      "description": "Launches the project-owned Voron Trident 350 3D print-sequence simulation view.",
+      "permissions": {
+        "filesystem": "workspace_read",
+        "network": "none",
+        "sourceMutation": false,
+        "nondeterminism": false
+      }
     }
   ]
 }

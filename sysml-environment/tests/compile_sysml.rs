@@ -15,8 +15,9 @@ fn compiles_sysml_with_latest_metamodel() {
 fn lists_available_metamodels() {
     let metamodels = available_metamodels().unwrap();
 
-    assert!(metamodels
-        .iter()
-        .any(|metamodel| metamodel.id == SYSML_2_0_METAMODEL_057_ID));
+    assert!(
+        metamodels
+            .iter()
+            .any(|metamodel| metamodel.id == SYSML_2_0_METAMODEL_057_ID)
+    );
 }
-

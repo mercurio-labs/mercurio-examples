@@ -1,3 +1,9 @@
 .mercurio/
 **/.mercurio/
 target/
+__pycache__/
+**/__pycache__/
+.idea/
+**/.venv/
+*.log
+model-graph-analysis/out/

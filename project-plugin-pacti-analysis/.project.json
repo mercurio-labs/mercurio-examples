@@ -1,0 +1,15 @@
+{
+  "name": "Project Plugin Pacti Analysis",
+  "projectPlugins": [
+    "plugins/pacti-contract-analysis"
+  ],
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}

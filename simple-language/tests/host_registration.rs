@@ -17,5 +17,12 @@ fn host_registers_simple_language() {
     );
 
     assert_eq!(report.status, SemanticCompileStatus::Ok);
-    assert!(report.document.unwrap().elements.iter().any(|element| element.id == "type.Vehicle"));
+    assert!(
+        report
+            .document
+            .unwrap()
+            .elements
+            .iter()
+            .any(|element| element.id == "type.Vehicle")
+    );
 }

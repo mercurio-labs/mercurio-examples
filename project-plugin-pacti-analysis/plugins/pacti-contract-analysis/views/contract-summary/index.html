@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pacti Contract Summary</title>
+  <style>
+    body {
+      margin: 0;
+      font: 13px system-ui, sans-serif;
+      color: #172033;
+      background: #f6f8fb;
+    }
+    main {
+      padding: 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid #d7deea;
+    }
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5eaf2;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pacti Contract Summary</h1>
+    <p>This static view is shipped by the project plugin and can render persisted run artifacts.</p>
+    <table>
+      <thead>
+        <tr><th>Check</th><th>Status</th><th>Subject</th><th>Detail</th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="4">Load a run artifact to populate this view.</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

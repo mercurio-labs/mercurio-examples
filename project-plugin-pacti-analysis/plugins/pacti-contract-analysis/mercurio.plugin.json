@@ -1,0 +1,70 @@
+{
+  "id": "org.example.pacti-contract-analysis",
+  "version": "0.1.0",
+  "name": "Project Pacti Contract Analysis",
+  "scope": "project",
+  "description": "Project-local process-backed contract analysis capability using a Python/Pacti adapter boundary.",
+  "requires": {
+    "mercurio": ">=0.1.0",
+    "kir": ">=0.1",
+    "plugin_abi": "0.1",
+    "reasoning_api": "0.1"
+  },
+  "capabilities": [
+    {
+      "capability": {
+        "id": "org.example.pacti.contracts",
+        "kind": "contract_analysis",
+        "name": "Pacti Contract Analysis",
+        "version": "0.1.0",
+        "api_version": "0.1",
+        "deterministic": true,
+        "input_artifact_kinds": [
+          "kir"
+        ],
+        "output_artifact_kinds": [
+          "table",
+          "reasoning_report"
+        ]
+      },
+      "provider": {
+        "kind": "process",
+        "command": [
+          "python",
+          "plugins/pacti-contract-analysis/analyze_pacti.py"
+        ]
+      },
+      "input_schemas": [
+        "mercurio.contracts.v1"
+      ],
+      "output_schemas": [
+        "mercurio.contract_analysis.summary.v1",
+        "mercurio.table.v1"
+      ]
+    }
+  ],
+  "viewDescriptors": [
+    {
+      "id": "org.example.pacti.contracts.summary",
+      "name": "Pacti Contract Summary",
+      "appliesTo": [
+        "org.example.pacti.contracts"
+      ],
+      "artifactKinds": [
+        "table",
+        "reasoning_report"
+      ],
+      "entry": "views/contract-summary/index.html",
+      "schemas": [
+        "mercurio.contract_analysis.summary.v1",
+        "mercurio.table.v1"
+      ]
+    }
+  ],
+  "permissions": {
+    "filesystem": "workspace_read",
+    "network": "none",
+    "source_mutation": false,
+    "nondeterminism": false
+  }
+}

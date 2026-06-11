@@ -877,7 +877,7 @@ def main():
 
         # Show a visible error dialog so the window doesn't just flash closed.
         try:
-            from PyQt6.QtWidgets import QApplication, QMessageBox
+            from PyQt6.QtWidgets import QMessageBox
             _app = QApplication.instance() or QApplication(sys.argv)
             msg = QMessageBox()
             msg.setWindowTitle("Mercurio — Simulation Error")

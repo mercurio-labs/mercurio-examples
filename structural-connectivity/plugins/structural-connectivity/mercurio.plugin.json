@@ -1,0 +1,60 @@
+{
+  "id": "org.example.structural-connectivity",
+  "version": "0.1.0",
+  "name": "Structural Connectivity Analysis",
+  "scope": "project",
+  "description": "NetworkX-backed analysis that checks part hierarchy connectivity, detects orphaned elements, and ranks structural hotspots by PageRank.",
+  "requires": {
+    "mercurio": ">=0.1.0",
+    "kir": ">=0.1",
+    "plugin_abi": "0.1",
+    "reasoning_api": "0.1"
+  },
+  "capabilities": [
+    {
+      "capability": {
+        "id": "org.example.structural-connectivity",
+        "kind": "mercurio.capability.kind/static-analysis",
+        "name": "Structural Connectivity Analysis",
+        "version": "0.1.0",
+        "api_version": "0.1",
+        "deterministic": true,
+        "input_artifact_kinds": ["kir", "graph"],
+        "output_artifact_kinds": ["table", "reasoning_report"]
+      },
+      "provider": {
+        "kind": "process",
+        "command": [
+          "python",
+          "plugins/structural-connectivity/analyze_connectivity.py"
+        ]
+      },
+      "input_schemas": [
+        "mercurio.graph.v1"
+      ],
+      "output_schemas": [
+        "mercurio.structural_connectivity.summary.v1",
+        "mercurio.table.v1"
+      ]
+    }
+  ],
+  "viewDescriptors": [
+    {
+      "id": "org.example.structural-connectivity.report",
+      "name": "Connectivity Report",
+      "appliesTo": ["org.example.structural-connectivity"],
+      "artifactKinds": ["table", "reasoning_report"],
+      "entry": "views/connectivity-report/index.html",
+      "schemas": [
+        "mercurio.structural_connectivity.summary.v1",
+        "mercurio.table.v1"
+      ]
+    }
+  ],
+  "permissions": {
+    "filesystem": "none",
+    "network": "none",
+    "source_mutation": false,
+    "nondeterminism": false
+  }
+}

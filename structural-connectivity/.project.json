@@ -1,0 +1,8 @@
+{
+  "id": "org.example.structural-connectivity",
+  "name": "Structural Connectivity Example",
+  "version": "0.1.0",
+  "capabilities": [
+    "plugins/structural-connectivity/mercurio.plugin.json"
+  ]
+}

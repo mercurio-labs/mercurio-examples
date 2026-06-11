@@ -7,7 +7,10 @@ Rust executable.
 
 ## Running
 
-Open this folder in the Mercurio workbench and choose **View -> Simulate**.
+Open this folder in the Mercurio workbench and choose
+**View -> Voron Print Sequence**. The project descriptor registers
+`sim/launch.py` as a `python_process` view with `protocol: "legacy_process"`
+and `kind: "simulation"`, so it appears as a normal registered project view.
 The workbench:
 
 1. Compiles `model/voron-trident-350.sysml`.
@@ -23,6 +26,7 @@ model/
   voron-trident-350.sysml   Structural SysML model and PrintSequence analysis case
 sim/
   voron.sim3d.json          Project-owned 3D scene and visual binding config
+  launch.py                 Registered simulation view launcher
 assets/
   voron-trident-350.glb     Project-owned static printer geometry
 ```
