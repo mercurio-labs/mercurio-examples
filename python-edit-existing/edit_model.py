@@ -3,8 +3,8 @@ Load an existing SysML project, make edits, and save back.
 
 This script demonstrates the Python authoring workflow for an existing model:
 
-  1. Read .sysml files from the project directory.
-  2. Load them into a ModelBuilder via from_files().
+  1. Open the project through .project.json.
+  2. Load descriptor-selected sources into a ModelBuilder via from_project().
   3. Apply mutations — add a new sensor definition, add a part to an existing
      definition, rename a usage.
   4. Print a diff of changed files and write the results back to disk.
@@ -13,9 +13,9 @@ Note on .project.json
 ---------------------
 The .project.json file is used by the Mercurio desktop app to configure
 the project (library selection, registered views, plugins).  The native
-Python bindings do not read it — they collect all .sysml files in the
-directory.  Your Python script is responsible for discovering source files;
-the helpers below show one simple pattern for that.
+Python bindings read .project.json, including descriptor-selected source roots,
+entrypoints, and dependencies. Use ModelBuilder.from_project() when editing a
+descriptor-backed workspace.
 """
 
 from __future__ import annotations
@@ -32,25 +32,15 @@ from mercurio.authoring import (
 from mercurio.stdlib import isq, scalar_values
 
 # ---------------------------------------------------------------------------
-# 1.  Discover and load all .sysml files in the project
+# 1.  Open the descriptor-backed project
 # ---------------------------------------------------------------------------
 
 PROJECT_DIR = Path(__file__).parent
-MODEL_DIR = PROJECT_DIR / "model"
 
-
-def load_project_files(root: Path) -> dict[str, str]:
-    """Return {relative_path: source} for every .sysml file under *root*."""
-    return {
-        str(p.relative_to(PROJECT_DIR)): p.read_text(encoding="utf-8")
-        for p in sorted(root.rglob("*.sysml"))
-    }
-
-
-original_files = load_project_files(MODEL_DIR)
-print(f"Loaded {len(original_files)} file(s): {list(original_files)}\n")
-
-builder = ModelBuilder.from_files(original_files)
+builder = ModelBuilder.from_project(PROJECT_DIR)
+original_files = builder.to_sysml()
+original_text = "\n".join(original_files.values())
+print(f"Loaded {len(original_files)} descriptor-selected file(s): {list(original_files)}\n")
 
 # ---------------------------------------------------------------------------
 # 2.  Inspect what's already there
@@ -72,22 +62,26 @@ humidity_sensor = (
     .with_attr(AttributeUsage("sampling_rate").typed(isq.frequency))
     .with_attr(AttributeUsage("resolution").typed(scalar_values.real))
 )
-builder.add_to("SensorSystem", humidity_sensor)
+if "part def HumiditySensor" not in original_text:
+    builder.add_to("SensorSystem", humidity_sensor)
 
 # (b) Add the new sensor as a part inside SensorArray.
-builder.add_to(
-    "SensorSystem.SensorArray",
-    PartUsage("humidity_sensor").typed(humidity_sensor),
-)
+if "part humidity_sensor:" not in original_text:
+    builder.add_to(
+        "SensorSystem.SensorArray",
+        PartUsage("humidity_sensor").typed(humidity_sensor),
+    )
 
 # (c) Add a power-budget attribute to SensorArray.
-builder.add_to(
-    "SensorSystem.SensorArray",
-    AttributeUsage("power_budget").typed(isq.power),
-)
+if "attribute power_budget:" not in original_text:
+    builder.add_to(
+        "SensorSystem.SensorArray",
+        AttributeUsage("power_budget").typed(isq.power),
+    )
 
 # (d) Rename an existing usage for clarity.
-builder.rename("SensorSystem.SensorArray.temp_sensor", "temperature_sensor")
+if "temp_sensor" in original_text:
+    builder.rename("SensorSystem.SensorArray.temp_sensor", "temperature_sensor")
 
 # ---------------------------------------------------------------------------
 # 4.  Show diff and write back

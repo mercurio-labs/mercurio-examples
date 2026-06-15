@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "name": "Project Plugin Pacti Analysis",
+  "name": "Satellite Stdlib Authoring",
   "model": {
-    "entrypoints": ["model/contract-demo.sysml"]
+    "entrypoints": ["output/model.sysml"]
   },
   "libraries": [
     {

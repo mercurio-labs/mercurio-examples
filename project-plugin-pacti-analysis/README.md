@@ -11,6 +11,9 @@ The plugin lives in `plugins/pacti-contract-analysis` and declares:
 - a static view asset: `views/contract-summary/index.html`
 - permissions: workspace read, no network, no source mutation
 
+The core `.project.json` describes the SysML model and stdlib dependency;
+`mercurio.extensions.json` registers the project-local plugin.
+
 The Python wrapper currently emits a deterministic example report. A real Pacti
 wrapper can replace the body of `analyze_pacti.py` while preserving the same
 Mercurio DTO boundary.

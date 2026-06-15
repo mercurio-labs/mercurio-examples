@@ -1,0 +1,24 @@
+{
+  "schema": "dev.mercurio.extensions.v1",
+  "version": 1,
+  "views": [
+    {
+      "label": "Voron Print Sequence",
+      "kind": "simulation",
+      "runtime": "python_process",
+      "protocol": "legacy_process",
+      "entry": "sim/launch.py",
+      "script": "sim/launch.py",
+      "artifactKinds": [
+        "simulation_trace"
+      ],
+      "description": "Launches the project-owned Voron Trident 350 3D print-sequence simulation view.",
+      "permissions": {
+        "filesystem": "workspace_read",
+        "network": "none",
+        "sourceMutation": false,
+        "nondeterminism": false
+      }
+    }
+  ]
+}

@@ -8,9 +8,10 @@ Rust executable.
 ## Running
 
 Open this folder in the Mercurio workbench and choose
-**View -> Voron Print Sequence**. The project descriptor registers
-`sim/launch.py` as a `python_process` view with `protocol: "legacy_process"`
-and `kind: "simulation"`, so it appears as a normal registered project view.
+**View -> Voron Print Sequence**. The core project descriptor identifies the
+SysML entrypoint; `mercurio.extensions.json` registers `sim/launch.py` as a
+`python_process` view with `protocol: "legacy_process"` and
+`kind: "simulation"`, so it appears as a normal registered project view.
 The workbench:
 
 1. Compiles `model/voron-trident-350.sysml`.

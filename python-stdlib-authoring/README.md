@@ -20,3 +20,5 @@ python build_model.py
 ```
 
 Generated SysML is printed to stdout and written to `./output/model.sysml`.
+The adjacent `.project.json` points at that generated file so the example can
+also be opened as a descriptor-backed Mercurio project.

@@ -3,7 +3,9 @@ Satellite system — Python stdlib authoring example.
 
 Builds a three-subsystem satellite model whose attributes are typed to ISQ
 quantity-kind value types and SI units from the SysML standard library, then
-prints the generated SysML source and writes it to ./output/.
+prints the generated SysML source and writes it to ./output/. The adjacent
+.project.json opens the generated output as a descriptor-backed Mercurio
+project.
 """
 
 from __future__ import annotations

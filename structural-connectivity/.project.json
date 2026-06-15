@@ -1,8 +1,18 @@
 {
+  "schema": "dev.mercurio.project.v2",
+  "version": 2,
   "id": "org.example.structural-connectivity",
   "name": "Structural Connectivity Example",
-  "version": "0.1.0",
-  "capabilities": [
-    "plugins/structural-connectivity/mercurio.plugin.json"
+  "model": {
+    "entrypoints": ["model/satellite-system.sysml"]
+  },
+  "dependencies": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
   ]
 }

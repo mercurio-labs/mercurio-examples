@@ -1,0 +1,5 @@
+{
+  "schema": "dev.mercurio.extensions.v1",
+  "version": 1,
+  "projectPlugins": ["plugins/pacti-contract-analysis"]
+}
