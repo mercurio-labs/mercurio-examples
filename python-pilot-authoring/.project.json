@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "Pilot Python Authoring",
+  "model": {
+    "entrypoints": [
+      "output/metadata-example-1.sysml",
+      "output/state-definition-example-1.sysml"
+    ]
+  },
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}
