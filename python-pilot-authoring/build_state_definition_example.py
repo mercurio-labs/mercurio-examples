@@ -45,7 +45,7 @@ vehicle_states = (
 )
 
 builder = (
-    ModelBuilder()
+    ModelBuilder(validate_each_mutation=False)
     .in_package("State Definition Example-1", stdlib_imports=False)
     .add(AttributeDefinition("VehicleStartSignal"))
     .add(AttributeDefinition("VehicleOnSignal"))

@@ -1,17 +1,17 @@
 package SatelliteModel {
-  import ISQBase::*;
+  import ISQBase::'*';
 
-  import ISQSpaceTime::*;
+  import ISQSpaceTime::'*';
 
-  import ISQMechanics::*;
+  import ISQMechanics::'*';
 
-  import ISQThermodynamics::*;
+  import ISQThermodynamics::'*';
 
-  import ISQElectromagnetism::*;
+  import ISQElectromagnetism::'*';
 
-  import SI::*;
+  import SI::'*';
 
-  import ScalarValues::*;
+  import ScalarValues::'*';
 
   part def Structure {
     attribute dry_mass: ISQBase::MassValue;

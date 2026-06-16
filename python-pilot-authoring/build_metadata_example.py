@@ -41,7 +41,7 @@ vehicle = (
 )
 
 builder = (
-    ModelBuilder()
+    ModelBuilder(validate_each_mutation=False)
     .in_package("Metadata Example-1", stdlib_imports=False)
     .add(MetadataDefinition("SafetyFeature"))
     .add(metadata_security)

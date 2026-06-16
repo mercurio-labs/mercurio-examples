@@ -1,11 +1,11 @@
 package SensorSystem {
-  import ISQBase::*;
+  import ISQBase::'*';
 
-  import ISQSpaceTime::*;
+  import ISQSpaceTime::'*';
 
-  import ISQElectromagnetism::*;
+  import ISQElectromagnetism::'*';
 
-  import ScalarValues::*;
+  import ScalarValues::'*';
 
   part def TemperatureSensor {
     attribute mass: ISQBase::MassValue;
