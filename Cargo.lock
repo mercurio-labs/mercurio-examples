@@ -264,6 +264,7 @@ version = "0.1.0"
 dependencies = [
  "mercurio-foundation",
  "mercurio-sysml",
+ "serde_json",
 ]
 
 [[package]]

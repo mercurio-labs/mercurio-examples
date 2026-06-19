@@ -53,6 +53,22 @@ mass calculation query is:
 sum(model.parts().map(|p| p.property("mass_kg")))
 ```
 
+The first executable analysis result can be expressed as a single row:
+
+```rhai
+let vehicle = model.parts()
+  .where(|p| p.property("declared_name") == "Vehicle")
+  .first();
+let total = sum(model.parts().map(|p| p.property("mass_kg")));
+let max = vehicle.property("max_mass_kg");
+#{
+  total_mass_kg: total,
+  max_mass_kg: max,
+  margin_kg: max - total,
+  verdict: if total <= max { "pass" } else { "fail" }
+}
+```
+
 ## Target Workflow
 
 This fixture should evolve into the first end-to-end analysis workflow:
