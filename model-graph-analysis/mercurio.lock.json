@@ -1,0 +1,12 @@
+{
+  "schema": "dev.mercurio.lock.v1",
+  "packages": [
+    {
+      "name": "dev.mercurio/ai-profile",
+      "version": "1.0.0",
+      "locator": "kpar:dev.mercurio/ai-profile:1.0.0@sha256:296ded63376869702bfb57187e40d7d660113a5e2750bae5bdef763de8a2bb7a",
+      "digest": "sha256:296ded63376869702bfb57187e40d7d660113a5e2750bae5bdef763de8a2bb7a",
+      "media_type": "application/vnd.mercurio.kpar.v1+zip"
+    }
+  ]
+}
