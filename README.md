@@ -37,6 +37,11 @@ It declares a process-backed contract-analysis capability, a static web view,
 and a Python wrapper that can be replaced with a stock Pacti adapter while
 preserving Mercurio's neutral JSON DTO boundary.
 
+`vehicle-mass-compliance/` is the canonical small analysis fixture. It models a
+vehicle mass requirement and an analysis case that should evolve into the first
+end-to-end query, calculation, constraint, verification, evidence, and view
+workflow.
+
 Run all examples and tests with:
 
 ```powershell

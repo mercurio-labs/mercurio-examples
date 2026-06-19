@@ -39,3 +39,21 @@ fn compiles_sysml_with_2026_04_release_selector() {
     assert_eq!(env.metamodel().id, SYSML_2_0_PILOT_2026_04_ID);
     assert!(!document.elements.is_empty());
 }
+
+#[test]
+fn compiles_vehicle_mass_compliance_fixture() {
+    let env = SysmlEnvironment::latest_metamodel().unwrap();
+    let source = include_str!("../../vehicle-mass-compliance/model/vehicle-mass-compliance.sysml");
+    let document = env
+        .compile_text(source, "vehicle-mass-compliance.sysml")
+        .unwrap();
+
+    assert!(document.elements.iter().any(|element| {
+        element.properties.get("declared_name").and_then(|name| name.as_str())
+            == Some("Vehicle")
+    }));
+    assert!(document.elements.iter().any(|element| {
+        element.properties.get("declared_name").and_then(|name| name.as_str())
+            == Some("VehicleMassComplianceAnalysis")
+    }));
+}
