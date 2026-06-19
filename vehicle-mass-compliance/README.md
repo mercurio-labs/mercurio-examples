@@ -69,6 +69,13 @@ let max = vehicle.property("max_mass_kg");
 }
 ```
 
+The fixture regression also wraps this query with the shared capability report
+shape:
+
+```text
+Run -> Result artifact -> Evidence graph -> CriterionPass insight
+```
+
 ## Target Workflow
 
 This fixture should evolve into the first end-to-end analysis workflow:
