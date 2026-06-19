@@ -262,6 +262,7 @@ dependencies = [
 name = "mercurio-sysml-environment-example"
 version = "0.1.0"
 dependencies = [
+ "mercurio-foundation",
  "mercurio-sysml",
 ]
 

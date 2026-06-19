@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use mercurio_core::{Graph, RhaiEngine};
 use mercurio_sysml::{SYSML_2_0_METAMODEL_057_ID, SysmlEnvironment, available_metamodels};
 
 const SYSML_2_0_PILOT_2026_04_ID: &str = "sysml-2.0-pilot-2026-04";
@@ -56,4 +59,24 @@ fn compiles_vehicle_mass_compliance_fixture() {
         element.properties.get("declared_name").and_then(|name| name.as_str())
             == Some("VehicleMassComplianceAnalysis")
     }));
+}
+
+#[test]
+fn vehicle_mass_compliance_fixture_evaluates_mass_query() {
+    let env = SysmlEnvironment::latest_metamodel().unwrap();
+    let source = include_str!("../../vehicle-mass-compliance/model/vehicle-mass-compliance.sysml");
+    let document = env
+        .compile_text(source, "vehicle-mass-compliance.sysml")
+        .unwrap();
+    let graph = Arc::new(Graph::from_document(document).unwrap());
+
+    let result = RhaiEngine::new()
+        .eval_query(
+            graph,
+            r#"sum(model.parts().map(|p| p.property("mass_kg")))"#,
+        )
+        .unwrap();
+
+    assert_eq!(result.columns, vec!["value"]);
+    assert_eq!(result.rows[0][0].as_f64(), Some(1070.0));
 }
