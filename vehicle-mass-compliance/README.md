@@ -45,6 +45,14 @@ model.parts()
 count_by_kind(model.elements())
 ```
 
+The DSL stdlib now supports `sum(...)` over numeric arrays. The intended mass
+calculation query, once SysML attribute values are projected as numeric element
+properties, is:
+
+```rhai
+sum(model.parts().map(|p| p.property("mass_kg")))
+```
+
 ## Target Workflow
 
 This fixture should evolve into the first end-to-end analysis workflow:
