@@ -1,7 +1,8 @@
 {
-  "version": 1,
+  "schema": "dev.mercurio.project.v2",
+  "version": 2,
   "name": "Sensor System",
-  "libraries": [
+  "dependencies": [
     {
       "id": "stdlib",
       "role": "baseline",

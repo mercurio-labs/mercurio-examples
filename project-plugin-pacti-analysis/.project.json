@@ -1,10 +1,11 @@
 {
-  "version": 1,
+  "schema": "dev.mercurio.project.v2",
+  "version": 2,
   "name": "Project Plugin Pacti Analysis",
   "model": {
     "entrypoints": ["model/contract-demo.sysml"]
   },
-  "libraries": [
+  "dependencies": [
     {
       "id": "stdlib",
       "role": "baseline",
