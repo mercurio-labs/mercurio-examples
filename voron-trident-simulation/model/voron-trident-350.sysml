@@ -12,9 +12,9 @@ package VoronTrident350 {
 
     part def VoronPrinter {
         // Build volume
-        attribute buildVolume_x : Real = 350.0;   // mm
-        attribute buildVolume_y : Real = 350.0;   // mm
-        attribute buildVolume_z : Real = 250.0;   // mm
+        attribute buildVolume_x : Real = 351.0;   // mm
+        attribute buildVolume_y : Real = 351.0;   // mm
+        attribute buildVolume_z : Real = 251.0;   // mm
 
         // Derived sensor readings written by subsystems into the shared
         // context so the printer-level state machine can act on them.
@@ -96,9 +96,36 @@ package VoronTrident350 {
     part def CoreXYMotionSystem {
         attribute position_x : Real = 0.0;   // mm
         attribute position_y : Real = 0.0;   // mm
+        attribute homeRate   : Real = 80.0;  // mm / s
+        attribute printRate  : Real = 32.0;  // mm / s
 
         part xCarriage : XYCarriage;
         part zDrive[3] : ZLeadscrew;          // Trident = triple-Z
+
+        state lifecycle {
+            state Parked;
+            state Homing {
+                do action integrate {
+                    assert constraint {
+                        position_x == position_x + homeRate * duration;
+                    }
+                }
+            }
+            state Ready;
+            state Rastering {
+                do action integrate {
+                    assert constraint {
+                        position_y == position_y + printRate * duration;
+                    }
+                }
+            }
+            state Complete;
+
+            transition parked_homing first Parked accept start then Homing;
+            transition homing_ready first Homing accept when position_x >= 120 then Ready;
+            transition ready_rastering first Ready accept after 2.0 then Rastering;
+            transition rastering_complete first Rastering accept when position_y >= 180 then Complete;
+        }
     }
 
     part def XYCarriage  {}
@@ -107,13 +134,59 @@ package VoronTrident350 {
     // ── Indx multi-toolchanger ───────────────────────────────────────────
 
     part def IndxToolchanger {
-        attribute activeTool : Real = 0.0;    // 0 = T0, 1 = T1, 2 = T2 …
+        attribute activeTool : Real = 0.0;     // 0 = T0, 1 = T1, 2 = T2
+        attribute changeProgress : Real = 0.0; // 0..1
+        attribute changeRate : Real = 0.5;     // progress / s
 
         part dock[6] : ToolDock;
+        part extruder : FilamentDrive;
+
+        state lifecycle {
+            state T0Loaded;
+            state Changing {
+                do action integrate {
+                    assert constraint {
+                        changeProgress == changeProgress + changeRate * duration;
+                    }
+                }
+            }
+            state T1Loaded;
+
+            transition t0_changing first T0Loaded accept after 8.0 then Changing;
+            transition changing_t1 first Changing accept when changeProgress >= 1.0 then T1Loaded;
+        }
     }
 
     part def ToolDock {
         attribute occupied : Boolean = true;
+    }
+
+    part def FilamentDrive {
+        attribute flowRate : Real = 1.2;       // mm^3 / s
+        attribute filamentUsed : Real = 0.0;   // mm^3
+
+        state lifecycle {
+            state Idle;
+            state Priming {
+                do action integrate {
+                    assert constraint {
+                        filamentUsed == filamentUsed + flowRate * duration;
+                    }
+                }
+            }
+            state Extruding {
+                do action integrate {
+                    assert constraint {
+                        filamentUsed == filamentUsed + flowRate * duration;
+                    }
+                }
+            }
+            state Retracting;
+
+            transition idle_priming first Idle accept start then Priming;
+            transition priming_extruding first Priming accept after 2.0 then Extruding;
+            transition extruding_retracting first Extruding accept after 8.0 then Retracting;
+        }
     }
 
     // ── Electronics ──────────────────────────────────────────────────────
@@ -129,13 +202,20 @@ package VoronTrident350 {
 
     analysis def PrintSequence :> AnalysisCase {
         subject printer : VoronPrinter;
+        subject motion : CoreXYMotionSystem;
         subject bed : HeatedBed;
         subject hotend : Hotend;
+        subject extruder : FilamentDrive;
+        subject toolchanger : IndxToolchanger;
 
         assume constraint = printer.bed_temperature == 22.0;
         assume constraint = printer.hotend_temperature == 22.0;
+        assume constraint = motion.position_x == 0.0;
+        assume constraint = motion.position_y == 0.0;
         assume constraint = bed.temperature == 22.0;
         assume constraint = hotend.temperature == 22.0;
+        assume constraint = extruder.filamentUsed == 0.0;
+        assume constraint = toolchanger.changeProgress == 0.0;
 
         objective thermalProfile {
             subject = printer.bed.temperature;
@@ -147,6 +227,22 @@ package VoronTrident350 {
 
         objective printerReadiness {
             subject = printer.bed_temperature;
+        }
+
+        objective motionProgress {
+            subject = motion.position_y;
+        }
+
+        objective motionHoming {
+            subject = motion.position_x;
+        }
+
+        objective extrusionVolume {
+            subject = extruder.filamentUsed;
+        }
+
+        objective toolChangeProgress {
+            subject = toolchanger.changeProgress;
         }
     }
 }

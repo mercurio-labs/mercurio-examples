@@ -1,74 +1,98 @@
 """
 Verification script for the mercurio Python simulation API.
-Runs against the Voron Trident 350 example workspace.
 
-STATUS:
-  PASS  mercurio.open() / backend launch
-  PASS  model.parts()              -- 17 parts returned
-  PASS  model.analysis_cases()     -- PrintSequence found
-  PASS  model.run_analysis()       -- completed
-  PASS  trace.states()             -- state sequences tracked
-  PASS  trace.channels / trace.channel()
-        bed and hotend temperatures are integrated from textual state
-        do actions compiled into KIR do_behavior.
+Runs the Voron Trident 350 PrintSequence analysis case and checks that Python
+can discover structure, execute multiple concurrent state machines, and read
+parametric channels for the replay dashboard.
 """
 
 import os
+import sys
 from pathlib import Path
+
 WORKSPACE = str(Path(__file__).resolve().parent.parent)
-_dev_exe = Path(WORKSPACE).parent.parent / "mercurio-product/target/debug/mercurio-console-api.exe"
-if _dev_exe.exists():
-    os.environ.setdefault("MERCURIO_EXE", str(_dev_exe))
+REPO_ROOT = Path(WORKSPACE).parent.parent
+
+python_support = REPO_ROOT / "mercurio-host-adapters" / "python"
+if python_support.exists() and str(python_support) not in sys.path:
+    sys.path.insert(0, str(python_support))
+
+dev_exe = REPO_ROOT / "mercurio-product/target/debug/mercurio-console-api.exe"
+if dev_exe.exists():
+    os.environ.setdefault("MERCURIO_EXE", str(dev_exe))
 
 import mercurio
+
+EXPECTED_SUBJECTS = [
+    "printer",
+    "motion",
+    "bed",
+    "hotend",
+    "extruder",
+    "toolchanger",
+]
+
 
 def section(label):
     print(f"\n{'=' * 55}")
     print(f"  {label}")
-    print('=' * 55)
+    print("=" * 55)
+
+
+def flattened_states(trace, subject):
+    states = trace.states(subject)
+    return states, [state for active in states.states for state in active]
+
+
+def active_state_sequence(states):
+    sequence = [active[-1] if active else "?" for active in states.states]
+    compact = []
+    for state in sequence:
+        if not compact or compact[-1] != state:
+            compact.append(state)
+    return compact
+
+
+def channel(trace, channel_id):
+    data = trace.channel(channel_id)
+    assert len(data.times) > 0, f"expected samples for {channel_id}"
+    assert len(data.times) == len(data.values), f"expected aligned samples for {channel_id}"
+    return data
+
 
 print(f"mercurio {mercurio.__version__}  |  {WORKSPACE}")
 
 with mercurio.open(WORKSPACE) as model:
-
-    # ── Parts ─────────────────────────────────────────────────────────────────
     section("Parts")
     parts = model.parts()
     print(f"  total: {len(parts)}")
-    for p in parts:
-        indent = "  " + ("  " * p.depth)
-        print(f"{indent}{p.name} : {p.kind}")
+    for part in parts:
+        indent = "  " + ("  " * part.depth)
+        print(f"{indent}{part.name} : {part.kind}")
 
-    assert len(parts) > 0,                               "expected parts"
-    assert any(p.name == "bed" for p in parts),          "expected 'bed'"
-    assert any(p.name == "hotend" for p in parts),       "expected 'hotend'"
-    assert any(p.name == "motion" for p in parts),       "expected 'motion'"
-    assert any(p.name == "toolchanger" for p in parts),  "expected 'toolchanger'"
-    assert any(p.name == "electronics" for p in parts),  "expected 'electronics'"
-    print("  PASS: all part assertions")
+    expected_parts = ["bed", "hotend", "motion", "toolchanger", "electronics", "extruder"]
+    for name in expected_parts:
+        assert any(part.name == name for part in parts), f"expected part {name!r}"
+    print("  PASS: core composed parts found")
 
-    # ── Attribute access ───────────────────────────────────────────────────────
     section("Part attribute access")
-    bed = next(p for p in parts if p.name == "bed")
+    bed = next(part for part in parts if part.name == "bed")
     print(f"  bed.attrs() = {bed.attrs()}")
-    heat_rate = bed.attr("heatRate") or bed.attr("heat_rate")
-    print(f"  bed.attr('heatRate') = {heat_rate}")
-    print("  PASS: attr access works (values depend on KIR property inclusion)")
+    print(f"  bed.attr('heatRate') = {bed.attr('heatRate') or bed.attr('heat_rate')}")
+    print("  PASS: attr access works")
 
-    # ── Analysis cases ────────────────────────────────────────────────────────
     section("Analysis Cases")
     cases = model.analysis_cases()
-    print(f"  found {len(cases)}:")
-    for c in cases:
-        print(f"    [{c.id}]  label={c.label!r}  subjects={c.subject_count}")
+    for case in cases:
+        print(f"    [{case.id}]  label={case.label!r}  subjects={case.subject_count}")
 
-    assert len(cases) >= 1,                                   "expected at least one"
-    assert any(c.label == "PrintSequence" for c in cases),    "expected PrintSequence"
-    print_seq = next(c for c in cases if c.label == "PrintSequence")
-    assert print_seq.subject_count == 3,                      f"expected 3 subjects, got {print_seq.subject_count}"
-    print("  PASS: all analysis case assertions")
+    print_seq = next((case for case in cases if case.label == "PrintSequence"), None)
+    assert print_seq is not None, "expected PrintSequence analysis case"
+    assert print_seq.subject_count == len(EXPECTED_SUBJECTS), (
+        f"expected {len(EXPECTED_SUBJECTS)} subjects, got {print_seq.subject_count}"
+    )
+    print("  PASS: PrintSequence exposes all replay subjects")
 
-    # ── Run simulation ────────────────────────────────────────────────────────
     section("Simulation: PrintSequence")
     trace = model.run_analysis("PrintSequence")
     print(f"  status   : {trace.status}")
@@ -79,48 +103,50 @@ with mercurio.open(WORKSPACE) as model:
     for ch in trace.channels:
         print(f"    {ch.id}  source={ch.source}")
 
-    assert trace.status == "completed",     f"expected completed, got {trace.status!r}"
-    assert trace.duration > 40.0,           f"expected >40s (bed heat time), got {trace.duration}"
+    assert trace.status == "completed", f"expected completed, got {trace.status!r}"
+    assert trace.duration > 40.0, f"expected bed heat time, got {trace.duration}"
     print("  PASS: trace status and duration")
 
-    # ── State sequences ───────────────────────────────────────────────────────
-    section("States: bed")
-    bed_states = trace.states("bed")
-    print(f"  {len(bed_states.times)} state entries")
-    for t, s in zip(bed_states.times, bed_states.states):
-        print(f"    t={t:6.1f}s  {s}")
+    section("State sequences")
+    expected_state_markers = {
+        "printer": ["Idle", "Homing", "Heating"],
+        "motion": ["Parked", "Homing", "Rastering", "Complete"],
+        "bed": ["Cold", "Heating", "Ready"],
+        "hotend": ["Cold", "Heating", "Ready"],
+        "extruder": ["Idle", "Priming", "Extruding", "Retracting"],
+        "toolchanger": ["T0Loaded", "Changing", "T1Loaded"],
+    }
+    for subject in EXPECTED_SUBJECTS:
+        states, flat = flattened_states(trace, subject)
+        print(f"  {subject}: {' -> '.join(active_state_sequence(states))}")
+        assert len(states.times) > 0, f"expected state entries for {subject}"
+        for expected in expected_state_markers[subject]:
+            assert any(expected in state for state in flat), (
+                f"expected {expected!r} in {subject} states, got {flat}"
+            )
+    print("  PASS: all authored state machines executed")
 
-    assert len(bed_states.times) > 0,           "expected bed state entries"
-    all_bed = [s for ss in bed_states.states for s in ss]
-    assert any("Cold" in s for s in all_bed),   f"expected Cold in bed states, got {all_bed}"
-    assert any("Heating" in s for s in all_bed), f"expected Heating in bed states, got {all_bed}"
-    print("  PASS: bed states (Cold -> Heating sequence found)")
+    section("Parametric channels")
+    bed_temp = channel(trace, "bed.temperature")
+    hotend_temp = channel(trace, "hotend.temperature")
+    motion_x = channel(trace, "motion.position_x")
+    motion_y = channel(trace, "motion.position_y")
+    filament = channel(trace, "extruder.filamentUsed")
+    change = channel(trace, "toolchanger.changeProgress")
 
-    section("States: hotend")
-    hotend_states = trace.states("hotend")
-    all_hotend = [s for ss in hotend_states.states for s in ss]
-    print(f"  sequence: {hotend_states.states}")
-    assert len(hotend_states.times) > 0,             "expected hotend state entries"
-    assert any("Heating" in s for s in all_hotend),  f"expected Heating in hotend states"
-    print("  PASS: hotend states")
+    print(f"  bed.temperature:              {bed_temp.values[0]:.1f} -> {bed_temp.values[-1]:.1f}")
+    print(f"  hotend.temperature:           {hotend_temp.values[0]:.1f} -> {hotend_temp.values[-1]:.1f}")
+    print(f"  motion.position_x:            {motion_x.values[0]:.1f} -> {motion_x.values[-1]:.1f}")
+    print(f"  motion.position_y:            {motion_y.values[0]:.1f} -> {motion_y.values[-1]:.1f}")
+    print(f"  extruder.filamentUsed:        {filament.values[0]:.1f} -> {filament.values[-1]:.1f}")
+    print(f"  toolchanger.changeProgress:   {change.values[0]:.1f} -> {change.values[-1]:.1f}")
 
-    section("States: printer")
-    printer_states = trace.states("printer")
-    all_printer = [s for ss in printer_states.states for s in ss]
-    print(f"  sequence: {printer_states.states}")
-    assert len(printer_states.times) > 0,  "expected printer state entries"
-    print("  PASS: printer states")
-
-    # ── Known gap: channels ───────────────────────────────────────────────────
-    section("Rate channels")
-    print(f"  channels={len(trace.channels)}")
-    assert len(trace.channels) > 0, "expected rate channels"
-    bed_ch = trace.channel("bed.temperature")
-    print(f"  bed.temperature: {len(bed_ch.times)} samples")
-    print(f"  first: t={bed_ch.times[0]}, temp={bed_ch.values[0]}")
-    print(f"  last:  t={bed_ch.times[-1]:.1f}, temp={bed_ch.values[-1]:.1f}")
-    assert len(bed_ch.times) > 10, "expected sampled bed temperature channel"
-    assert bed_ch.values[-1] >= 110.0, "expected bed to reach target temperature"
-    print("  PASS: rate channels present and extractable")
+    assert bed_temp.values[-1] >= 110.0, "expected bed to reach target temperature"
+    assert hotend_temp.values[-1] >= 245.0, "expected hotend to reach target temperature"
+    assert motion_x.values[-1] >= 120.0, "expected homing X travel"
+    assert motion_y.values[-1] >= 180.0, "expected rastering Y travel"
+    assert filament.values[-1] >= 10.0, "expected filament accumulation"
+    assert change.values[-1] >= 1.0, "expected completed tool change progress"
+    print("  PASS: replay channels present and advancing")
 
 section("ALL PASSING ASSERTIONS OK")

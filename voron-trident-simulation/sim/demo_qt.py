@@ -84,6 +84,7 @@ else:
 
 import mercurio
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
@@ -113,6 +114,17 @@ STATE_FILL = {
     "Cold":       "#0f2540",
     "Heating":    "#7c2d12",
     "Ready":      "#14532d",
+    "Parked":     "#1e293b",
+    "Homing":     "#166534",
+    "Rastering":  "#15803d",
+    "Complete":   "#14532d",
+    "Idle":       "#1e293b",
+    "Priming":    "#92400e",
+    "Extruding":  "#b45309",
+    "Retracting": "#78350f",
+    "T0Loaded":   "#3b0764",
+    "Changing":   "#581c87",
+    "T1Loaded":   "#4c1d95",
     "Printing":   "#312e81",
     "Printing2":  "#3730a3",
     "ToolChange": "#4c1d95",
@@ -124,9 +136,24 @@ BED_Z = {
     "Ready":   (105, 123),
 }
 
-SUBJECTS      = ["printer", "bed", "hotend"]
-SUBJ_Y        = {"hotend": 0.0, "bed": 1.0, "printer": 2.0}
-SUBJ_COLOR    = {"printer": "#6366f1", "bed": ORANGE, "hotend": CYAN}
+SUBJECTS      = ["printer", "motion", "bed", "hotend", "extruder", "toolchanger"]
+SUBJ_Y        = {subj: float(len(SUBJECTS) - 1 - i) for i, subj in enumerate(SUBJECTS)}
+SUBJ_COLOR    = {
+    "printer": "#6366f1",
+    "motion": "#22c55e",
+    "bed": ORANGE,
+    "hotend": CYAN,
+    "extruder": "#f59e0b",
+    "toolchanger": "#a855f7",
+}
+PARAM_CHANNELS = [
+    ("bed.temperature", "Bed temp", "C", 20.0, 115.0, ORANGE),
+    ("hotend.temperature", "Hotend temp", "C", 20.0, 260.0, CYAN),
+    ("motion.position_x", "Motion X", "mm", 0.0, 140.0, "#22c55e"),
+    ("motion.position_y", "Motion Y", "mm", 0.0, 200.0, "#84cc16"),
+    ("extruder.filamentUsed", "Filament", "mm^3", 0.0, 14.0, "#f59e0b"),
+    ("toolchanger.changeProgress", "Tool change", "", 0.0, 1.0, "#a855f7"),
+]
 
 # ── Animation timing ──────────────────────────────────────────────────────────
 # One frame every FRAME_DT simulation-seconds; played at SPEEDUP × real speed.
@@ -191,9 +218,17 @@ def extract_subj_data(trace):
     """Per-subject: timeline of (time, state) and unique ordered states."""
     result = {}
     for subj in SUBJECTS:
-        sd    = trace.states(subj)
-        times = list(sd.times)
-        seq   = [s[-1] if s else "?" for s in sd.states]
+        try:
+            state_data = trace.states(subj)
+            times = list(state_data.times)
+            seq = [s[-1] if s else "?" for s in state_data.states]
+        except Exception:
+            logging.exception("failed to read state trace for %s", subj)
+            times = []
+            seq = []
+        if not times or not seq:
+            times = [0.0]
+            seq = ["?"]
         uniq  = []
         for s in seq:
             if not uniq or uniq[-1] != s:
@@ -230,6 +265,37 @@ def visited_at(subj_data, subj, t):
 def all_times(subj_data):
     return sorted({t for subj in SUBJECTS for t in subj_data[subj]["times"]})
 
+def numeric_pairs(trace, channel_id: str) -> list[tuple[float, float]]:
+    """Return numeric (time, value) samples for a channel, or [] if unavailable."""
+    try:
+        data = trace.channel(channel_id)
+    except Exception:
+        logging.exception("failed to read value channel %s", channel_id)
+        return []
+    pairs = []
+    for t, value in zip(data.times, data.values):
+        try:
+            pairs.append((float(t), float(value)))
+        except (TypeError, ValueError):
+            continue
+    return pairs
+
+def value_at_pairs(pairs: list[tuple[float, float]], t: float) -> float | None:
+    if not pairs:
+        return None
+    current = pairs[0][1]
+    for sample_t, value in pairs:
+        if sample_t <= t + 1e-6:
+            current = value
+        else:
+            break
+    return current
+
+def normalize_value(value: float | None, vmin: float, vmax: float) -> float:
+    if value is None or vmax <= vmin:
+        return 0.0
+    return max(0.0, min(1.0, (value - vmin) / (vmax - vmin)))
+
 def frame_times(duration: float) -> list[float]:
     """Uniform time grid at FRAME_DT intervals covering the full simulation."""
     n = max(2, round(duration / FRAME_DT) + 1)
@@ -242,6 +308,8 @@ def interp_bed_z(sd, t: float) -> tuple[float, float]:
     """
     times = sd["bed"]["times"]
     seq   = sd["bed"]["seq"]
+    if not times or not seq:
+        return BED_Z.get("Ready", (105, 123))
 
     # Find which transition bracket t falls in
     prev_i = 0
@@ -495,6 +563,343 @@ def make_state_machine_html(trace) -> str:
 #  ANIMATED 3D SCHEMATIC
 # ══════════════════════════════════════════════════════════════════════════════
 
+def make_replay_html(trace) -> str:
+    """Animated state-machine and parametric replay driven by one time slider."""
+    sd = extract_subj_data(trace)
+    times = frame_times(trace.duration)
+    value_series = {
+        channel_id: numeric_pairs(trace, channel_id) or [(0.0, 0.0)]
+        for channel_id, _label, _unit, _vmin, _vmax, _color in PARAM_CHANNELS
+    }
+
+    def sx(subj, state):
+        uniq = sd[subj]["uniq"]
+        if len(uniq) <= 1:
+            return 0.5
+        return uniq.index(state) / (len(uniq) - 1) if state in uniq else 0.0
+
+    def trigger_label(subj, from_s, to_s):
+        data = sd[subj]
+        for i in range(len(data["seq"]) - 1):
+            if data["seq"][i] == from_s and data["seq"][i + 1] == to_s:
+                t_change = data["times"][i + 1]
+                for entry in trace._timeline:
+                    if abs(entry.get("t", 0.0) - t_change) < 0.15:
+                        for ev in entry.get("events", []):
+                            transition_id = ev.get("transition_id", "")
+                            if subj in transition_id:
+                                return ev.get("trigger", "")
+                break
+        return ""
+
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        row_heights=[0.68, 0.32],
+        vertical_spacing=0.11,
+    )
+
+    for subj in SUBJECTS:
+        y = SUBJ_Y[subj]
+        col = SUBJ_COLOR[subj]
+        uniq = sd[subj]["uniq"]
+        fig.add_annotation(
+            x=-0.06,
+            y=y,
+            text=f"<b>{subj}</b>",
+            showarrow=False,
+            font=dict(color=col, size=12, family="Segoe UI"),
+            xanchor="right",
+            xref="x",
+            yref="y",
+        )
+        for i in range(len(uniq) - 1):
+            x0 = sx(subj, uniq[i])
+            x1 = sx(subj, uniq[i + 1])
+            label = trigger_label(subj, uniq[i], uniq[i + 1])
+            fig.add_annotation(
+                x=x1 - 0.05,
+                y=y,
+                ax=x0 + 0.05,
+                ay=y,
+                xref="x",
+                yref="y",
+                axref="x",
+                ayref="y",
+                arrowhead=2,
+                arrowsize=1.4,
+                arrowwidth=2,
+                arrowcolor="#252840",
+                text=f'<span style="font-size:9px;color:#3d4468">{label}</span>',
+                font=dict(size=9, color="#3d4468"),
+                yshift=14,
+                showarrow=True,
+            )
+
+    trace_map = {}
+    trace_idx = 0
+    for subj in SUBJECTS:
+        y = SUBJ_Y[subj]
+        col = SUBJ_COLOR[subj]
+        uniq = sd[subj]["uniq"]
+        xs = [sx(subj, state) for state in uniq]
+        ys = [y] * len(uniq)
+
+        fig.add_trace(go.Scatter(
+            x=xs,
+            y=ys,
+            mode="markers+text",
+            marker=dict(
+                symbol="square",
+                size=58,
+                color="#0b0f1e",
+                line=dict(color="#1c2040", width=2),
+            ),
+            text=uniq,
+            textfont=dict(color="#475569", size=11, family="Segoe UI"),
+            textposition="middle center",
+            showlegend=False,
+            hoverinfo="skip",
+        ), row=1, col=1)
+        bg_idx = trace_idx
+        trace_idx += 1
+
+        active = state_at(sd, subj, times[0])
+        fig.add_trace(go.Scatter(
+            x=[sx(subj, active)],
+            y=[y],
+            mode="markers+text",
+            marker=dict(
+                symbol="square",
+                size=60,
+                color=col,
+                line=dict(color="white", width=2.5),
+            ),
+            text=[active],
+            textfont=dict(color="white", size=11, family="Segoe UI"),
+            textposition="middle center",
+            showlegend=False,
+            hoverinfo="skip",
+        ), row=1, col=1)
+        active_idx = trace_idx
+        trace_idx += 1
+        trace_map[subj] = (bg_idx, active_idx)
+
+    marker_map = {}
+    for channel_id, label, unit, vmin, vmax, col in PARAM_CHANNELS:
+        pairs = value_series[channel_id]
+        xs = [sample_t for sample_t, _value in pairs]
+        ys = [normalize_value(value, vmin, vmax) for _sample_t, value in pairs]
+        hovertext = [
+            f"{label}: {value:.2f}{(' ' + unit) if unit else ''}<br>t={sample_t:.1f}s"
+            for sample_t, value in pairs
+        ]
+        fig.add_trace(go.Scatter(
+            x=xs,
+            y=ys,
+            mode="lines",
+            name=label,
+            line=dict(color=col, width=2),
+            hovertext=hovertext,
+            hoverinfo="text",
+        ), row=2, col=1)
+        trace_idx += 1
+
+        value = value_at_pairs(pairs, times[0])
+        fig.add_trace(go.Scatter(
+            x=[times[0]],
+            y=[normalize_value(value, vmin, vmax)],
+            mode="markers",
+            marker=dict(size=10, color=col, line=dict(color="white", width=1.5)),
+            showlegend=False,
+            hoverinfo="skip",
+        ), row=2, col=1)
+        marker_map[channel_id] = trace_idx
+        trace_idx += 1
+
+    fig.add_trace(go.Scatter(
+        x=[times[0], times[0]],
+        y=[0.0, 1.0],
+        mode="lines",
+        line=dict(color="#e2e8f0", width=1.5, dash="dot"),
+        showlegend=False,
+        hoverinfo="skip",
+    ), row=2, col=1)
+    cursor_idx = trace_idx
+
+    frames = []
+    for t in times:
+        frame_data = []
+        frame_traces = []
+        for subj in SUBJECTS:
+            y = SUBJ_Y[subj]
+            col = SUBJ_COLOR[subj]
+            uniq = sd[subj]["uniq"]
+            xs = [sx(subj, state) for state in uniq]
+            ys = [y] * len(uniq)
+            bg_idx, active_idx = trace_map[subj]
+            active = state_at(sd, subj, t)
+            visited = visited_at(sd, subj, t)
+            bg_colors = ["#141828" if state in visited and state != active else "#0b0f1e" for state in uniq]
+            bg_borders = ["#25285e" if state in visited and state != active else "#1c2040" for state in uniq]
+
+            frame_data.append(go.Scatter(
+                x=xs,
+                y=ys,
+                mode="markers+text",
+                marker=dict(
+                    symbol="square",
+                    size=58,
+                    color=bg_colors,
+                    line=dict(color=bg_borders, width=2),
+                ),
+                text=uniq,
+                textfont=dict(color="#475569", size=11, family="Segoe UI"),
+                textposition="middle center",
+            ))
+            frame_traces.append(bg_idx)
+
+            frame_data.append(go.Scatter(
+                x=[sx(subj, active)],
+                y=[y],
+                mode="markers+text",
+                marker=dict(
+                    symbol="square",
+                    size=60,
+                    color=col,
+                    line=dict(color="white", width=2.5),
+                ),
+                text=[active],
+                textfont=dict(color="white", size=11, family="Segoe UI"),
+                textposition="middle center",
+            ))
+            frame_traces.append(active_idx)
+
+        for channel_id, _label, _unit, vmin, vmax, col in PARAM_CHANNELS:
+            pairs = value_series[channel_id]
+            value = value_at_pairs(pairs, t)
+            frame_data.append(go.Scatter(
+                x=[t],
+                y=[normalize_value(value, vmin, vmax)],
+                mode="markers",
+                marker=dict(size=10, color=col, line=dict(color="white", width=1.5)),
+            ))
+            frame_traces.append(marker_map[channel_id])
+
+        frame_data.append(go.Scatter(
+            x=[t, t],
+            y=[0.0, 1.0],
+            mode="lines",
+            line=dict(color="#e2e8f0", width=1.5, dash="dot"),
+        ))
+        frame_traces.append(cursor_idx)
+        frames.append(go.Frame(data=frame_data, traces=frame_traces, name=f"{t:.2f}"))
+
+    fig.frames = frames
+    steps = [
+        dict(
+            args=[[frame.name], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}],
+            label=f"{float(frame.name):.1f}s",
+            method="animate",
+        )
+        for frame in frames
+    ]
+
+    fig.update_xaxes(visible=False, range=[-0.14, 1.1], row=1, col=1)
+    fig.update_yaxes(
+        visible=False,
+        range=[-0.65, float(len(SUBJECTS)) - 0.2],
+        row=1,
+        col=1,
+    )
+    fig.update_xaxes(
+        title_text="Simulation time (s)",
+        range=[0.0, max(trace.duration, 1.0)],
+        gridcolor=BORDER,
+        zeroline=False,
+        tickfont=dict(color="#64748b", size=10),
+        title_font=dict(color="#64748b", size=11),
+        row=2,
+        col=1,
+    )
+    fig.update_yaxes(
+        title_text="Normalized values",
+        range=[-0.08, 1.08],
+        tickvals=[0.0, 0.5, 1.0],
+        ticktext=["min", "mid", "max"],
+        gridcolor=BORDER,
+        zeroline=False,
+        tickfont=dict(color="#64748b", size=10),
+        title_font=dict(color="#64748b", size=11),
+        row=2,
+        col=1,
+    )
+    fig.update_layout(
+        paper_bgcolor=BG_DARK,
+        plot_bgcolor=BG_DARK,
+        font=dict(color=TEXT_MAIN, family="Segoe UI"),
+        margin=dict(l=110, r=20, t=72, b=90),
+        height=560,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=0.31,
+            xanchor="left",
+            x=0.0,
+            bgcolor=BG_CARD,
+            bordercolor=BORDER,
+            font=dict(color=TEXT_MAIN, size=10),
+        ),
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            x=0.0,
+            y=1.2,
+            xanchor="left",
+            bgcolor=BG_HEADER,
+            bordercolor=BORDER,
+            pad={"r": 10, "t": 4, "b": 4},
+            font=dict(color=ACCENT, size=12),
+            buttons=[
+                dict(
+                    label="Play",
+                    method="animate",
+                    args=[None, {
+                        "frame": {"duration": FRAME_MS, "redraw": True},
+                        "fromcurrent": True,
+                        "mode": "immediate",
+                        "transition": {"duration": max(0, FRAME_MS - 20), "easing": "linear"},
+                    }],
+                ),
+                dict(
+                    label="Pause",
+                    method="animate",
+                    args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}],
+                ),
+            ],
+        )],
+        sliders=[dict(
+            active=0,
+            steps=steps,
+            currentvalue=dict(
+                prefix="t = ",
+                suffix=" s",
+                font=dict(color=TEXT_MAIN, size=12),
+                xanchor="left",
+            ),
+            pad=dict(t=14, b=10),
+            bgcolor=BG_CARD,
+            bordercolor=BORDER,
+            tickcolor=BORDER,
+            font=dict(color="#3d4468", size=10),
+            len=1.0,
+            x=0,
+        )],
+    )
+
+    return fig.to_html(full_html=True, include_plotlyjs=True, config={"displayModeBar": False})
+
+
 def _box_data(x0, y0, z0, x1, y1, z1, color, name, opacity=0.85, showlegend=True):
     vx = [x0, x1, x1, x0, x0, x1, x1, x0]
     vy = [y0, y0, y1, y1, y0, y0, y1, y1]
@@ -522,14 +927,18 @@ def make_3d_html(trace) -> str:
     S  = 350
 
     def final(subj):
-        seq = sd[subj]["seq"]
-        return seq[-1] if seq else sd[subj]["uniq"][0]
+        data = sd.get(subj, {"seq": [], "uniq": ["?"]})
+        seq = data["seq"]
+        return seq[-1] if seq else data["uniq"][0]
 
     def fill(s): return STATE_FILL.get(s, "#1e293b")
 
     bed_s    = final("bed")
     hotend_s = final("hotend")
     print_s  = final("printer")
+    motion_s = final("motion")
+    extruder_s = final("extruder")
+    tool_s = final("toolchanger")
     bz0, bz1 = interp_bed_z(sd, trace.duration)   # bed at final position
 
     # Frame wireframe (all 12 edges as one Scatter3d)
@@ -548,10 +957,12 @@ def make_3d_html(trace) -> str:
 
     fig.add_trace(_box_data(0,   0,   0,   S,   38,  52,  "#0a0c18",      "Electronics",          0.75))
     fig.add_trace(_box_data(25,  25,  bz0, 325, 325, bz1, fill(bed_s),    f"Bed  [{bed_s}]",       0.90))
-    fig.add_trace(_box_data(5,   5,   282, 28,  345, 296, fill(print_s),  f"Gantry  [{print_s}]",  0.72))
-    fig.add_trace(_box_data(322, 5,   282, 345, 345, 296, fill(print_s),  "",                      0.72, showlegend=False))
-    fig.add_trace(_box_data(28,  163, 280, 322, 182, 293, "#11142a",       "X rail",               0.60))
+    fig.add_trace(_box_data(5,   5,   282, 28,  345, 296, fill(motion_s), f"Motion  [{motion_s}]", 0.72))
+    fig.add_trace(_box_data(322, 5,   282, 345, 345, 296, fill(motion_s), "",                       0.72, showlegend=False))
+    fig.add_trace(_box_data(28,  163, 280, 322, 182, 293, fill(print_s),  f"Printer  [{print_s}]", 0.60))
     fig.add_trace(_box_data(148, 156, 258, 202, 189, 302, fill(hotend_s), f"Hotend  [{hotend_s}]", 0.95))
+    fig.add_trace(_box_data(165, 166, 250, 185, 179, 258, fill(extruder_s), f"Extruder  [{extruder_s}]", 0.95))
+    fig.add_trace(_box_data(285, 42,  62,  338, 320, 92,  fill(tool_s),   f"Toolchanger  [{tool_s}]", 0.70))
 
     fig.update_layout(
         paper_bgcolor=BG_DARK,
@@ -705,8 +1116,8 @@ class VoronWindow(QMainWindow):
 
         # State machine (main animated view)
         self._view_sm = QWebEngineView()
-        self._view_sm.setMinimumHeight(400)
-        lay.addWidget(labeled_card("State Machine  (▶ Play to animate)", self._view_sm))
+        self._view_sm.setMinimumHeight(560)
+        lay.addWidget(labeled_card("State Machines + Parametric Replay", self._view_sm))
 
         # Transition log table
         self._tbl_ev = self._make_event_table()
@@ -801,7 +1212,7 @@ class VoronWindow(QMainWindow):
 
     def update_from_trace(self, trace):
         # Animated Plotly charts
-        _load_html(self._view_sm, make_state_machine_html(trace))
+        _load_html(self._view_sm, make_replay_html(trace))
         _load_html(self._view_3d, make_3d_html(trace))
 
         # Transition log

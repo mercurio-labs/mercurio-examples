@@ -1,11 +1,7 @@
 {
-  "schema": "dev.mercurio.project.v2",
-  "version": 2,
+  "version": 1,
   "name": "Voron Trident 350 - Print Sequence",
-  "model": {
-    "entrypoints": ["model/voron-trident-350.sysml"]
-  },
-  "dependencies": [
+  "libraries": [
     {
       "id": "stdlib",
       "role": "baseline",
@@ -13,5 +9,6 @@
         "kind": "bundled_stdlib"
       }
     }
-  ]
+  ],
+  "plugins": []
 }

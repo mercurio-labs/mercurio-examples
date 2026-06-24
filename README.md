@@ -32,6 +32,17 @@ Run it with:
 python mercurio-examples/model-graph-analysis/analyze_model_d3.py
 ```
 
+`python/` is the first-release pure Python example set. It demonstrates the
+small public API for creating in-memory projects, saving projects, opening
+descriptor-backed projects, querying snapshots, editing source, running DSL
+queries, inspecting analysis cases, and creating variants.
+
+Run one example with:
+
+```powershell
+python mercurio-examples/python/01_create_in_memory.py
+```
+
 `project-plugin-pacti-analysis/` is a project-local capability plugin example.
 It declares a process-backed contract-analysis capability, a static web view,
 and a Python wrapper that can be replaced with a stock Pacti adapter while
