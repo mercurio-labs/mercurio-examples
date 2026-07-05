@@ -8,5 +8,5 @@ license = "MIT"
 mercurio-sysml = { path = "../../mercurio-sysml/crates/mercurio-sysml" }
 
 [dev-dependencies]
-mercurio-core = { package = "mercurio-foundation", path = "../../mercurio-foundation/crates/mercurio-foundation" }
+mercurio-core = { path = "../../mercurio-foundation/crates/mercurio-core" }
 serde_json = "1"
