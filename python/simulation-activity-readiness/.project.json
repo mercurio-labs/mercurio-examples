@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "dev.mercurio.examples.python.simulation-activity-readiness",
+  "name": "Python Simulation - Activity Readiness",
+  "model": {
+    "entrypoints": ["model/warmup-activity.sysml"]
+  },
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}

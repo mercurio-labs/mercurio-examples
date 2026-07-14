@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "simple-language",
-    "sysml-environment",
+    "rust/graph-analysis",
+    "rust/simple-language",
+    "rust/sysml-environment",
 ]
 resolver = "2"

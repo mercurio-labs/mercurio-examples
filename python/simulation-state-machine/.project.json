@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "dev.mercurio.examples.python.simulation-state-machine",
+  "name": "Python Simulation - State Machine",
+  "model": {
+    "entrypoints": ["model/printer-warmup.sysml"]
+  },
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}

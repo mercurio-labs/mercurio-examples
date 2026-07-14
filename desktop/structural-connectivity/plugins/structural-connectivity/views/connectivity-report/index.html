@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Structural Connectivity Report</title>
+  <style>
+    body {
+      margin: 0;
+      font: 13px system-ui, sans-serif;
+      color: #172033;
+      background: #f6f8fb;
+    }
+    main {
+      padding: 18px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+    p {
+      margin: 0 0 14px;
+      color: #526071;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid #d7deea;
+    }
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5eaf2;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #eef3f9;
+      font-weight: 650;
+    }
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eaf7ef;
+      color: #24683b;
+      font-size: 12px;
+      font-weight: 650;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Structural Connectivity Report</h1>
+    <p>This project plugin view renders the table artifact produced by the structural connectivity capability.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Kind</th>
+          <th>Depth</th>
+          <th>Component</th>
+          <th>PageRank</th>
+          <th>Status</th>
+          <th>In</th>
+          <th>Out</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr>
+          <td colspan="8">Run the Structural Connectivity Analysis capability to populate this view.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+  <script>
+    async function loadReport() {
+      try {
+        const context = await fetch("__mercurio/context.json" + window.location.search).then((response) => response.json());
+        if (!context.runId) {
+          return;
+        }
+        const report = await fetch("__mercurio/report.json" + window.location.search).then((response) => response.json());
+        const artifact = (report.artifacts || []).find((item) => item.id === "structural-connectivity-report");
+        const rows = artifact && artifact.payload ? artifact.payload.rows || [] : [];
+        const tbody = document.getElementById("rows");
+        if (!tbody || rows.length === 0) {
+          return;
+        }
+        tbody.textContent = "";
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          row.forEach((value, index) => {
+            const td = document.createElement("td");
+            if (index === 5) {
+              const status = document.createElement("span");
+              status.className = "status";
+              status.textContent = String(value);
+              td.appendChild(status);
+            } else {
+              td.textContent = String(value);
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        }
+      } catch {
+        /* Static file fallback: leave the empty-state row in place. */
+      }
+    }
+
+    loadReport();
+  </script>
+</body>
+</html>

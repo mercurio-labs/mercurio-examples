@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "dev.mercurio.examples.python.simulation-constraints-channels",
+  "name": "Python Simulation - Constraints And Channels",
+  "model": {
+    "entrypoints": ["model/thermal-chamber.sysml"]
+  },
+  "libraries": [
+    {
+      "id": "stdlib",
+      "role": "baseline",
+      "provider": {
+        "kind": "bundled_stdlib"
+      }
+    }
+  ]
+}
