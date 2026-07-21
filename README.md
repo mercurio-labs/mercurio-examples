@@ -7,24 +7,36 @@ grouped by the environment they are launched from:
 - `rust/` — raw Rust examples compiled and run with Cargo.
 - `desktop/` — projects opened in the Mercurio desktop/workbench shell.
 
-## Python API Examples
+## Core Python API Examples
 
-Use this section when validating the Python SDK or writing notebooks,
-automation, analysis scripts, capability providers, or generated SysML
-authoring workflows. Install the local SDK from the repository root if needed:
+Use this section when validating the stable Python SDK: model opening,
+creation, navigation, typed/fluent authoring, compile snapshots, and
+source-backed edits. Install the local SDK from the repository root if needed:
 
 ```powershell
-python -m pip install -e mercurio-host-adapters/python
+python -m pip install -e mercurio-host-adapters
 ```
 
-| Directory | Run | Python API coverage |
+Advanced REST, Lab, capability, simulation, DSL, view, and native probes live
+under [Backburner Python Examples](#backburner-python-examples). They are useful
+integration coverage, but they are not the stable Python interface.
+
+| Directory | Run | Stable Python API coverage |
 | --- | --- | --- |
-| `python/facade-tour/` | `python mercurio-examples/python/facade-tour/01_create_in_memory.py` | First-release facade: `mercurio.create`, `mercurio.project`, `mercurio.open`, fluent declarations, source save, compile snapshots, semantic refs, query helpers, DSL queries, analysis handles, and trade-study variants. |
+| `python/facade-tour/` | `python mercurio-examples/python/facade-tour/01_create_in_memory.py` | Stable facade progression in scripts 01-05: `mercurio.create`, `mercurio.project`, `mercurio.open`, fluent declarations, source save, compile snapshots, semantic refs, navigation, and source edits. Scripts 06-08 are backburner DSL/analysis/variant coverage. |
 | `python/stdlib-authoring/` | `cd mercurio-examples/python/stdlib-authoring; python build_model.py` | `ModelBuilder`, typed declarations, ISQ quantity kinds, SI units, scalar value refs, generated SysML, and descriptor-backed output. |
 | `python/pilot-authoring/` | `cd mercurio-examples/python/pilot-authoring; python build_metadata_example.py` | Pilot-shaped authoring with metadata annotations, multi-target metadata usage, nested parts, states, transitions, generated SysML, and semantic equivalence checks. |
 | `python/semantic-construction-typed/` | `python mercurio-examples/python/semantic-construction-typed/build_typed_model.py` | Semantic construction using typed elements, fluent declarations, compile snapshots, descriptor-backed open, and semantic legality checks. |
-| `python/edit-existing/` | `cd mercurio-examples/python/edit-existing; python transaction_query_writeback.py` | Descriptor-backed project editing, transactions, preview, apply, semantic queries, metatype traversal, and optional writeback with `--write`. |
+
+## Backburner Python Examples
+
+These examples remain runnable integration coverage, but they intentionally do
+not define the stable Python interface.
+
+| Directory | Run | Backburner coverage |
+| --- | --- | --- |
 | `python/model-graph-analysis/` | `python mercurio-examples/python/model-graph-analysis/analyze_model_d3.py` | Backend launch/connect, graph extraction, model topology analysis, candidate scoring, and portable D3 report generation. |
+| `python/edit-existing/` | `cd mercurio-examples/python/edit-existing; python transaction_query_writeback.py` | Descriptor-backed project editing, transactions, preview, apply, semantic queries, metatype traversal, and optional writeback with `--write`. |
 | `python/capability-provider/` | `python mercurio-examples/python/capability-provider/test_provider.py` | Standalone process-backed capability provider, `CapabilityRunner`, request/response DTOs, findings, artifacts, evidence graph, and local ABI verification. |
 | `python/rest-api-tour/` | `python mercurio-examples/python/rest-api-tour/run_rest_api_tour.py` | Plain-HTTP `mercurio-console-api` tour: health/version, workspace open, scoped files, session cell run, semantic legality, and cleanup. |
 | `python/native-core/` | `python mercurio-examples/python/native-core/probe_native_core.py` | In-process PyO3 native core probe with descriptor-backed open when `mercurio._core` is installed; clean skip in source-only Python environments. |
@@ -39,7 +51,7 @@ python -m pip install -e mercurio-host-adapters/python
 See [`python/facade-tour/README.md`](python/facade-tour/README.md) for the
 expanded Python API map and script-by-script progression.
 See [`EXAMPLES_DESCRIPTOR.md`](EXAMPLES_DESCRIPTOR.md) for the example coverage
-contract and the simulation-specific matrix.
+contract and the stable/backburner matrix.
 
 ### Planned Python Examples
 
@@ -142,19 +154,19 @@ listed in the per-environment tables above and do not exist yet.
 
 | Surface / capability | Existing coverage | Planned |
 | --- | --- | --- |
-| Python facade: open, query, graph, analysis handles | `python/facade-tour/`, `desktop/voron-trident-simulation/` | — |
+| Python facade: open, create, project, navigation | `python/facade-tour/` scripts 01-05, `python/semantic-construction-typed/` | — |
 | Authoring builder: typed declarations, generated SysML (`AuthoringProject`; Python `ModelBuilder`) | `python/stdlib-authoring/`, `python/pilot-authoring/`, `python/semantic-construction-typed/` | `rust/authoring/` |
-| Project editing: transactions, preview/apply, writeback | `python/edit-existing/` | `rust/edit-existing/` |
-| Trade studies and variants | `python/facade-tour/` | `rust/trade-study/` |
-| Semantic graph extraction and analysis | `python/model-graph-analysis/` | `rust/graph-analysis/` |
-| Simulation execution, state timelines, trace channels | `desktop/voron-trident-simulation/` (Python + desktop), `python/simulation-state-machine/`, `python/simulation-constraints-channels/` | `rust/runtime-simulation/` |
-| Simulation readiness, variants, and trace overlays | `python/simulation-activity-readiness/`, `python/simulation-variant-trade-study/`, `python/simulation-view-overlay/` | deeper diagram overlay examples after `docs/visualization-plan.md` V-3 |
-| Query DSL (Rhai) | `python/facade-tour/` (over HTTP) | `rust/query-dsl/` (in-process) |
-| Process-backed capability SDK (stdin/stdout ABI) | `desktop/project-plugin-pacti-analysis/`, `desktop/structural-connectivity/`, `python/capability-provider/` | deeper project-registration matrix coverage |
+| Project editing: transactions, preview/apply, writeback | `python/edit-existing/` (backburner) | `rust/edit-existing/` |
+| Trade studies and variants | `python/facade-tour/` script 08 (backburner) | `rust/trade-study/` |
+| Semantic graph extraction and analysis | `python/model-graph-analysis/` (backburner) | `rust/graph-analysis/` |
+| Simulation execution, state timelines, trace channels | `desktop/voron-trident-simulation/` (Python + desktop), `python/simulation-state-machine/`, `python/simulation-constraints-channels/` (backburner Python API) | `rust/runtime-simulation/` |
+| Simulation readiness, variants, and trace overlays | `python/simulation-activity-readiness/`, `python/simulation-variant-trade-study/`, `python/simulation-view-overlay/` (backburner Python API) | deeper diagram overlay examples after `docs/visualization-plan.md` V-3 |
+| Query DSL (Rhai) | `python/facade-tour/` script 06 (backburner) | `rust/query-dsl/` (in-process) |
+| Process-backed capability SDK (stdin/stdout ABI) | `desktop/project-plugin-pacti-analysis/`, `desktop/structural-connectivity/`, `python/capability-provider/` (backburner) | deeper project-registration matrix coverage |
 | WASM plugin ABI | — | `desktop/wasm-plugin-capability/` |
-| Lab / notebook kernel mode | `python/lab-notebook/` (probe) | richer notebook cell-report example |
-| Native PyO3 in-process mode (`mercurio._core`) | `python/native-core/` (probe) | deeper semantic workspace mutation example |
-| REST API (`mercurio-console-api`) | `python/rest-api-tour/` | mutation check/apply writeback flow |
+| Lab / notebook kernel mode | `python/lab-notebook/` (backburner probe) | richer notebook cell-report example |
+| Native PyO3 in-process mode (`mercurio._core`) | `python/native-core/` (backburner probe) | deeper semantic workspace mutation example |
+| REST API (`mercurio-console-api`) | `python/rest-api-tour/` (backburner) | mutation check/apply writeback flow |
 | MCP tool surface | — | `python/mcp-agent-session/` |
 | Browser WASM bindings | — | `browser/wasm-embedding/` |
 | Model store runtime (`pkg:` addresses, `.mruntime`, `LayeredRuntime`) | — | `rust/model-store/` |

@@ -1,48 +1,71 @@
 # Mercurio Examples Descriptor
 
-This descriptor is the human-readable contract for the examples tree. The
-examples are runnable evidence for public integration surfaces, not just sample
-code snippets. When a new surface ships, add it here and then add or update the
-corresponding example folder.
+This descriptor is the human-readable contract for the examples tree. Core
+examples are runnable evidence for stable public interfaces. Backburner examples
+are runnable integration coverage for surfaces that remain useful but are not
+first-release API commitments.
 
-## Python Simulation Suite
-
-| Directory | Status | Primary contract |
-| --- | --- | --- |
-| `python/simulation-state-machine/` | Runnable | Descriptor-backed state-machine analysis case; Python asserts trace states. |
-| `python/simulation-constraints-channels/` | Runnable | State `do action` lowering, rate integration, and objective-derived trace channels. |
-| `python/simulation-activity-readiness/` | Runnable | Activity dynamic-behavior projection or precise readiness diagnostics. |
-| `python/simulation-variant-trade-study/` | Runnable | Temporary source variants, parameter edit, repeated simulation comparison. |
-| `python/simulation-view-overlay/` | Runnable | Trace-to-overlay JSON plus part-tree projection over the small thermal model. |
-
-## Python Semantic/API Suite
+## Core Python API Suite
 
 | Directory | Status | Primary contract |
 | --- | --- | --- |
-| `python/semantic-construction-typed/` | Runnable | Typed authoring, compile snapshot, descriptor-backed open, and semantic legality helper. |
-| `python/capability-provider/` | Runnable | Process-backed capability stdin/stdout ABI, findings, table artifacts, evidence graph, and deterministic response metadata. |
-| `python/rest-api-tour/` | Runnable | Plain-HTTP console API calls for health/version, workspace open, scoped editor/session endpoints, semantic legality, and cleanup. |
-| `python/native-core/` | Probe | PyO3 native workspace open when `mercurio._core` is installed; successful skip otherwise. |
-| `python/lab-notebook/` | Probe | Lab-kernel `LabModel` and parameter-sweep handles when `MERCURIO_LAB_KERNEL=1`; successful skip otherwise. |
+| `python/facade-tour/` scripts 01-05 | Core | Stable facade: open, create, project, navigation, compile snapshots, semantic refs, source save, and source edits. |
+| `python/stdlib-authoring/` | Core | Typed `ModelBuilder` authoring, stdlib references, generated SysML, and descriptor-backed output. |
+| `python/pilot-authoring/` | Core | Fluent typed authoring for metadata, nested parts, state definitions, transitions, generated SysML, and equivalence checks. |
+| `python/semantic-construction-typed/` | Core | Typed authoring, compile snapshot, descriptor-backed open, and semantic legality helper. |
 
-## Python Semantic/API Coverage Matrix
+## Backburner Python Simulation Suite
 
-| Feature / risk area | Typed construction | Capability provider | REST tour | Native probe | Lab probe |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Fluent typed declarations | x |  |  | x |  |
-| Requirement factory declaration | x |  |  |  |  |
-| Generated SysML compile snapshot | x |  |  | x |  |
-| Descriptor-backed project open | x |  | x | x | via workspace |
-| Semantic legality helper | x |  | x |  | x |
-| Process capability request validation |  | x |  |  |  |
-| Reasoning report serialization |  | x |  |  |  |
-| Table artifact and finding output |  | x |  |  |  |
-| Evidence graph output |  | x |  |  |  |
-| Plain HTTP route coverage |  |  | x |  |  |
-| Scoped session cell run |  |  | x |  |  |
-| Scoped workspace cleanup |  |  | x |  |  |
-| In-process native workspace path |  |  |  | x |  |
-| Lab handle creation and parameter sweep |  |  |  |  | x |
+| Directory | Status | Primary contract |
+| --- | --- | --- |
+| `python/simulation-state-machine/` | Backburner runnable | Descriptor-backed state-machine analysis case; Python asserts trace states. |
+| `python/simulation-constraints-channels/` | Backburner runnable | State `do action` lowering, rate integration, and objective-derived trace channels. |
+| `python/simulation-activity-readiness/` | Backburner runnable | Activity dynamic-behavior projection or precise readiness diagnostics. |
+| `python/simulation-variant-trade-study/` | Backburner runnable | Temporary source variants, parameter edit, repeated simulation comparison. |
+| `python/simulation-view-overlay/` | Backburner runnable | Trace-to-overlay JSON plus part-tree projection over the small thermal model. |
+
+## Backburner Python Integration Suite
+
+| Directory | Status | Primary contract |
+| --- | --- | --- |
+| `python/facade-tour/` scripts 06-08 | Backburner runnable | DSL query, analysis execution, and trade-study variants. |
+| `python/model-graph-analysis/` | Backburner runnable | Sidecar launch/connect, graph extraction, topology analysis, and D3 report generation. |
+| `python/edit-existing/` | Backburner runnable | Source-backed project open, semantic refs, transaction preview/apply, and optional writeback. |
+| `python/capability-provider/` | Backburner runnable | Process-backed capability stdin/stdout ABI, findings, table artifacts, evidence graph, and deterministic response metadata. |
+| `python/rest-api-tour/` | Backburner runnable | Plain-HTTP console API calls for health/version, workspace open, scoped editor/session endpoints, semantic legality, and cleanup. |
+| `python/native-core/` | Backburner probe | PyO3 native workspace open when `mercurio._core` is installed; successful skip otherwise. |
+| `python/lab-notebook/` | Backburner probe | Lab-kernel `LabModel` and parameter-sweep handles when `MERCURIO_LAB_KERNEL=1`; successful skip otherwise. |
+
+## Core Python API Coverage Matrix
+
+| Feature / risk area | Facade 01-05 | Stdlib authoring | Pilot authoring | Typed construction |
+| --- | ---: | ---: | ---: | ---: |
+| `mercurio.create` | x |  |  | x |
+| `mercurio.project` / descriptor-backed source open | x |  |  |  |
+| `mercurio.open` / descriptor-backed model open | x |  |  | x |
+| Fluent typed declarations | x | x | x | x |
+| Stdlib references |  | x |  | x |
+| Generated SysML output | x | x | x | x |
+| Compile snapshots | x | x | x | x |
+| Semantic refs and navigation | x |  |  | x |
+| Source-backed edits | x |  |  |  |
+| Semantic legality helper |  |  |  | x |
+
+## Backburner Python Integration Coverage Matrix
+
+| Feature / risk area | Capability provider | REST tour | Native probe | Lab probe | Facade 06-08 | Edit existing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Process capability request validation | x |  |  |  |  |  |
+| Reasoning report serialization | x |  |  |  |  |  |
+| Table artifact and finding output | x |  |  |  |  |  |
+| Evidence graph output | x |  |  |  |  |  |
+| Plain HTTP route coverage |  | x |  |  |  |  |
+| Scoped session cell run |  | x |  |  | x |  |
+| Scoped workspace cleanup |  | x |  |  |  |  |
+| In-process native workspace path |  |  | x |  |  |  |
+| Lab handle creation and parameter sweep |  |  |  | x |  |  |
+| Analysis execution and variants |  |  |  |  | x |  |
+| Transaction preview/apply |  |  |  |  |  | x |
 
 ## Python Simulation Coverage Matrix
 
@@ -65,6 +88,11 @@ corresponding example folder.
 
 - Prefer descriptor-backed fixtures when an example is intended for both Python
   and desktop inspection.
+- Keep the core Python examples focused on opening, creating, navigation,
+  typed/fluent authoring, compile snapshots, and source-backed edits.
+- Put REST, Lab, capability-provider, DSL/session, analysis execution,
+  simulation, view rendering, and native-core probes in backburner sections until
+  they are promoted deliberately.
 - Prefer small CI-stable fixtures for regression examples; keep rich product
   demonstrations such as Voron as canonical end-to-end evidence.
 - If an example fails because the core behavior regressed, fix the core. If the
